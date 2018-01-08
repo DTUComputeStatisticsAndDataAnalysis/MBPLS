@@ -33,7 +33,6 @@ def loaddata():
 
 
 def plotdata(spectra, yields):
-    plt.figure()
     for spectrum, yield1 in zip(spectra,yields/yields.max()):
         plt.plot(spectrum.T,color=[0,0.3,yield1],linewidth=2)
 
@@ -54,37 +53,51 @@ def ScikitPLSversion(spectra_preprocessed, yields_preprocessed):
     return Scikitloadings, Scikitscores
 
 
-def WesterhuisPLS(X, y):
+def WesterhuisPLS(X, y, num_comp):
     from numpy.linalg import norm
-    from numpy import dot  
-    u = np.random.rand(yields.shape[0],1)   #initialize u randomly (actually for one dim y: u = y)
-    ws = []
-    con = 1
-    counter = 1
-    con_criterium = 1e-10
+    from numpy import dot, empty, hstack  
+    u = np.random.rand(yields.shape[0],1)   # initialize u randomly (actually for one dim y: u = y)
+    loadings = empty((X.shape[1],0))
+    scores = empty((X.shape[0],0))
+    con_criterium = 1e-20
     max_it = 1000
-    while con > con_criterium and counter < max_it:
-        w = dot(X.T, u) / dot(u.T, u)   # find weights using either random u or initialized by SVD (for two dim Y)
-        w_norm = w / norm(w)    # normalize w to length 1
-        t = dot(X, w_norm) / dot(w.T, w_norm)
-        q = dot(y.T, t) / dot(t.T, t)
-        u = dot(y, q)
-        ws.append(w_norm)
-        if len(ws) > 1: con = sum(abs(ws[len(ws) - 1] - ws[len(ws) - 2]))
-        print(con)
-        counter += 1
-
-    return ws, t, w_norm, con
+    for comp in range(num_comp):
+        ts = []
+        con = 1
+        counter = 1
+        while con > con_criterium and counter < max_it:
+            w = dot(X.T, u) / dot(u.T, u)   # find x weights using either random u or initialized by SVD (for two dim Y)
+            w_norm = w / norm(w)            # normalize w to length 1
+            t = dot(X, w_norm) / dot(w_norm.T, w_norm)
+            q = dot(y.T, t) / dot(t.T, t)   # find y weights
+            u = dot(y, q)
+            ts.append(t)
+            if len(ts) > 1: con = sum(abs(ts[len(ts) - 1] - ts[len(ts) - 2]))
+            counter += 1
+            print(con)
+        
+        p = dot(X.T, t) / dot(t.T, t)       # x loading
+        X = X - dot(t, p.T)                 # deflate X
+        y = y - dot(t, q.T)                 # deflate y
+        loadings = hstack((loadings, p))
+        scores = hstack((scores, t))
+    return loadings, scores
 
 
 spectra, yields = loaddata()
 plotdata(spectra, yields)
+plt.title('Spectra colored according to target yield')
 spectra_preprocessed, yields_preprocessed = preprocess(spectra, yields)
+
+plt.figure()
 Scikitloadings, Scikitscores = ScikitPLSversion(spectra_preprocessed, yields_preprocessed)
-#plotdata(Scikitloadings.T,np.array([0,1]))
-ws, t, w_norm, con = WesterhuisPLS(spectra_preprocessed, yields_preprocessed)
+plotdata(Scikitloadings.T,np.array([0,0]))
+plt.title('Scikit Learn PLS loadings')
 
-
+plt.figure()
+Westerhuisloadings, Westerhuisscores = WesterhuisPLS(spectra_preprocessed, yields_preprocessed, num_comp=2)
+plotdata(Westerhuisloadings.T,np.array([1,1]))
+plt.title('Westerhuis Paper PLS loadings')
 
 
 
