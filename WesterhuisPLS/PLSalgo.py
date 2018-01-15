@@ -3,8 +3,8 @@
 """
 Created on Fri Jan  5 10:05:52 2018
 
-- PLS algorithm according to Westerhuis el al. 1998
-- PLS is benchmarked to ScikitLearn 0.19.0 PLS algo
+- NIPALS PLS according to Westerhuis el al. 1998 and SIMPLS PLS according to Jong 1992
+- PLS results are benchmarked to ScikitLearn 0.19.0 PLS algo
 - data from Pectin paper (Baum et al. 2017)
 
 @author: andba@dtu.dk
@@ -53,10 +53,10 @@ def ScikitPLSversion(spectra_preprocessed, yields_preprocessed):
     return Scikitloadings, Scikitscores
 
 
-def WesterhuisPLS(X, y, num_comp):
+def NIPALSPLS(X, y, num_comp):
     from numpy.linalg import norm
     from numpy import dot, empty, hstack  
-    u = np.random.rand(yields.shape[0],1)   # initialize u randomly (actually for one dim y: u = y)
+    u = np.random.rand(yields.shape[0],1)   # initialize u randomly (actually for one dim u = y)
     loadings = empty((X.shape[1],0))
     scores = empty((X.shape[0],0))
     con_criterium = 1e-20
@@ -67,14 +67,13 @@ def WesterhuisPLS(X, y, num_comp):
         counter = 1
         while con > con_criterium and counter < max_it:
             w = dot(X.T, u) / dot(u.T, u)   # find x weights using either random u or initialized by SVD (for two dim Y)
-            w_norm = w / norm(w)            # normalize w to length 1
+            w_norm = w / norm(w)
             t = dot(X, w_norm) / dot(w_norm.T, w_norm)
-            q = dot(y.T, t) / dot(t.T, t)   # find y weights
+            q = dot(y.T, t) / dot(t.T, t)   
             u = dot(y, q)
             ts.append(t)
             if len(ts) > 1: con = sum(abs(ts[len(ts) - 1] - ts[len(ts) - 2]))
             counter += 1
-            print(con)
         
         p = dot(X.T, t) / dot(t.T, t)       # x loading
         X = X - dot(t, p.T)                 # deflate X
@@ -84,6 +83,33 @@ def WesterhuisPLS(X, y, num_comp):
     return loadings, scores
 
 
+def SIMPLSpls(X, y, num_comp):              # orthogonlization step is missing at the moment
+    from numpy.linalg import norm, svd
+    from numpy import dot, empty, hstack, expand_dims
+    loadings = empty((X.shape[1],0))
+    scores = empty((X.shape[0],0))
+    rr = empty((X.shape[1],0))
+    qq = empty((y.shape[1],0))
+
+    s = dot(X.T, y)
+    for comp in range(num_comp):
+        q = svd(dot(s.T, s))[1]
+        q = expand_dims(q, 1)
+        r = dot(s, q)
+        r = r / norm(r)
+        t = dot(X, r)
+#        t = t / norm(t)
+        p = dot(X.T, t)
+        p = p / norm(p)                         # actually performed after orthogonalization step
+        s = s - dot(p, dot(p.T, s))
+        loadings = hstack((loadings, p))
+        scores = hstack((scores, t))
+        rr = hstack((rr, r))
+        qq = hstack((qq, q))
+    
+    b = dot(rr, qq.T)
+    return loadings, scores, b
+
 spectra, yields = loaddata()
 plotdata(spectra, yields)
 plt.title('Spectra colored according to target yield')
@@ -91,13 +117,18 @@ spectra_preprocessed, yields_preprocessed = preprocess(spectra, yields)
 
 plt.figure()
 Scikitloadings, Scikitscores = ScikitPLSversion(spectra_preprocessed, yields_preprocessed)
-plotdata(Scikitloadings.T,np.array([0,0]))
+plotdata(Scikitloadings.T, np.array([0,0]))
 plt.title('Scikit Learn PLS loadings')
 
 plt.figure()
-Westerhuisloadings, Westerhuisscores = WesterhuisPLS(spectra_preprocessed, yields_preprocessed, num_comp=2)
-plotdata(Westerhuisloadings.T,np.array([1,1]))
-plt.title('Westerhuis Paper PLS loadings')
+NIPALSloadings, NIPALSscores = NIPALSPLS(spectra_preprocessed, yields_preprocessed, num_comp=2)
+plotdata(NIPALSloadings.T, np.array([1,1]))
+plt.title('NIPALS PLS loadings')
+
+plt.figure()
+SIMPLSloadings, SIMPLSscores, SIMPLSb = SIMPLSpls(spectra_preprocessed, yields_preprocessed, num_comp=2)
+plotdata(SIMPLSloadings.T, np.array([0.5, 0.5]))
+plt.title('SIMPLS PLS loadings')
 
 
 
