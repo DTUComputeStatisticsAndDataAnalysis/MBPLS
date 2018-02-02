@@ -24,7 +24,7 @@ def snv(spectra):
 def loaddata():
     from scipy.io import loadmat
     from pylab import log10
-    path = '/home/andba/Documents/Projects/DTU Compute/Novozymes BigData/MBPLS Package development/WesterhuisPLS/'
+    path = '/home/andba/Documents/Projects/DTU Compute/Novozymes BigData/MBPLS Package development/PLS/'
     data = loadmat(path+'data.mat')
     spectra = -log10(data['spectra_new'].T[:,18:160])
     spectra_snv = snv(spectra)
