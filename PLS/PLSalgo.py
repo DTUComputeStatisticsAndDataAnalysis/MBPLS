@@ -4,6 +4,7 @@
 Created on Fri Jan  5 10:05:52 2018
 
 - NIPALS PLS according to Westerhuis el al. 1998 and SIMPLS PLS according to Jong 1992
+- 2nd SIMPLS PLS algorithm according to ade4 MBPLS paper
 - PLS results are benchmarked to ScikitLearn 0.19.0 PLS algo
 - data from Pectin paper (Baum et al. 2017)
 
@@ -24,7 +25,7 @@ def snv(spectra):
 def loaddata():
     from scipy.io import loadmat
     from pylab import log10
-    path = '/home/andba/Documents/Projects/DTU Compute/Novozymes BigData/MBPLS Package development/PLS/'
+    path = '/media/bonsaii/Data/work/DTU Compute/NovozymesBigData/MBPLS/PLS/'
     data = loadmat(path+'data.mat')
     spectra = -log10(data['spectra_new'].T[:,18:160])
     spectra_snv = snv(spectra)
@@ -98,7 +99,7 @@ def SIMPLSpls(X, y, num_comp):              # orthogonlization step is missing a
         r = dot(s, q)
         r = r / norm(r)
         t = dot(X, r)
-#        t = t / norm(t)
+        #t = t / norm(t)
         p = dot(X.T, t)
         p = p / norm(p)                         # actually performed after orthogonalization step
         s = s - dot(p, dot(p.T, s))
@@ -109,6 +110,33 @@ def SIMPLSpls(X, y, num_comp):              # orthogonlization step is missing a
     
     b = dot(rr, qq.T)
     return loadings, scores, b
+
+
+def SIMPLSpls_ade4(X, y, num_comp):              
+    from numpy.linalg import norm, svd
+    from numpy import dot, empty, hstack
+    xloadings = empty((X.shape[1],0))
+    xscores = empty((X.shape[0],0))
+    yloadings = empty((y.shape[1],0))
+    yscores = empty((y.shape[0],0))
+
+    for comp in range(num_comp):
+        # Xside
+        s = dot(dot(dot(X.T,y),y.T),X)
+        p = svd(s)[0][:,0:1]
+        t = dot(X,p)
+        xloadings = hstack((xloadings, p))
+        xscores = hstack((xscores, t))
+        # Yside
+        v = dot(y.T, t)     # use x scores to find loadings on Y
+        u = dot(y,v)
+        yloadings = hstack((yloadings, v))
+        yscores = hstack((yscores, u))
+        # deflate on X and Y
+        X = X - dot(t,p.T)
+        y = y - dot(t,v.T) 
+    
+    return xloadings, xscores, yloadings, yscores
 
 spectra, yields = loaddata()
 plotdata(spectra, yields)
@@ -128,7 +156,12 @@ plt.title('NIPALS PLS loadings')
 plt.figure()
 SIMPLSloadings, SIMPLSscores, SIMPLSb = SIMPLSpls(spectra_preprocessed, yields_preprocessed, num_comp=2)
 plotdata(SIMPLSloadings.T, np.array([0.5, 0.5]))
-plt.title('SIMPLS PLS loadings')
+plt.title('deJong SIMPLS PLS loadings')
+
+plt.figure()
+SIMPLSade4loadings, SIMPLSade4scores, ade4yloadings, ade4yscores = SIMPLSpls_ade4(spectra_preprocessed, yields_preprocessed, num_comp=2)
+plotdata(SIMPLSade4loadings.T, np.array([0.5, 0.5]))
+plt.title('ade4 SIMPLS PLS loadings')
 
 
 
