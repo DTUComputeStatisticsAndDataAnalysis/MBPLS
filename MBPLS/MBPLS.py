@@ -114,20 +114,19 @@ def mbpls(X, Y, n_components, full_svd=True):
     # 5. Calculate super scores ts
     ts = np.dot(X, eigenv)
     
-    # 6. Calculate eigenvy by SVD(Y.T*X*X.T*Y)
-    S = np.dot(np.dot(np.dot(Y.T,X),X.T),Y)
-    eigenvy = np.linalg.svd(S, full_matrices=full_svd)[0][:,0:1]
+    # 6. Calculate v (Y-loading) by projection of ts on Y
+    v = np.dot(Y.T, ts)
     
-    # 7. Calculate scores u 
-    u = np.dot(Y, eigenvy)
+    # 7. Calculate u (Y-scores) 
+    u = np.dot(Y, v)
 
     # 8. Deflate X by calculating: Xnew = X - ts*eigenv.T
     Xnew = X - np.dot(ts, eigenv.T)
     
     # 9. Deflate Y by calculating: Ynew = Y - u*eigenvy.T
-    Ynew = Y - np.dot(u, eigenvy.T)
+    Ynew = Y - np.dot(u, v.T)
     
-    return eigenv, eigenvy, w, a, t, ts
+    return eigenv, v, w, a, t, ts
         
     
 plt.close('all')

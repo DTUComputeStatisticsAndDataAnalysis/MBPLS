@@ -25,7 +25,7 @@ def snv(spectra):
 def loaddata():
     from scipy.io import loadmat
     from pylab import log10
-    path = '/media/bonsaii/Data/work/DTU Compute/NovozymesBigData/MBPLS/PLS/'
+    path = '/home/andba/Documents/Projects/DTU Compute/Novozymes BigData/MBPLS Package development/PLS/'
     data = loadmat(path+'data.mat')
     spectra = -log10(data['spectra_new'].T[:,18:160])
     spectra_snv = snv(spectra)
@@ -127,8 +127,8 @@ def SIMPLSpls_ade4(X, y, num_comp):
         t = dot(X,p)
         xloadings = hstack((xloadings, p))
         xscores = hstack((xscores, t))
-        # Yside
-        v = dot(y.T, t)     # use x scores to find loadings on Y
+        # Yside (as projection of t on y)
+        v = dot(y.T,t)     
         u = dot(y,v)
         yloadings = hstack((yloadings, v))
         yscores = hstack((yscores, u))
