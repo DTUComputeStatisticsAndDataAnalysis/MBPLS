@@ -68,15 +68,15 @@ def mbpls(X, Y, n_components, full_svd=True):
     
     """
     X side:
-    ts - super scores
-    t - list of block scores (number of elements = number of blocks)
-    w - list of block loadings (number of elements = number of blocks)
-    a - list of super weights/loadings (number of elements = number of blocks)
+    Ts - super scores
+    T - list of block scores (number of elements = number of blocks)
+    W - list of block loadings (number of elements = number of blocks)
+    A - super weights/loadings (number of rows = number of blocks)
     eigenv - normal PLS loading (of length 1)
     
     Y side:
-    u - scores on Y
-    eigenvy - loadings on Y
+    U - scores on Y
+    V - loadings on Y
     
     """
     import numpy as np
@@ -89,44 +89,72 @@ def mbpls(X, Y, n_components, full_svd=True):
             feature_indices.append(np.array([feature_indices[-1][1], feature_indices[-1][1] + block.shape[1]]))
         else:
             feature_indices.append(np.array([0,block.shape[1]]))
+    
+    #Xblocks = X[:]   
+    W = []
+    T = []
+    V = []
+    U = []
+    A = np.empty((num_blocks,0))
+    V = np.empty((Y.shape[1],0))
+    U = np.empty((Y.shape[0],0))
+    Ts = np.empty((Y.shape[0],0))
+    
+    for block in range(num_blocks):
+        W.append(np.empty((X[block].shape[1],0)))
+        T.append(np.empty((X[block].shape[0],0)))
+        
+
+    # Concatenate X blocks
+    X = np.hstack(X)
+    for comp in range(n_components):
+        # 1. Restore X blocks (for each deflation step)
+        Xblocks = []
+        for indices in feature_indices:
+            Xblocks.append(X[:,indices[0]:indices[1]])
+        
+        # 2. Calculate eigenv (normal pls loading) by SVD(X.T*Y*Y.T*X) --> eigenvector with largest eigenvalue
+        S = np.dot(np.dot(np.dot(X.T,Y),Y.T),X)
+        eigenv = np.linalg.svd(S, full_matrices=full_svd)[0][:,0:1]
+    
+        # 3. Calculate block loadings w1, w2, ... , superweights a1, a2, ... 
+        w = []
+        a = []
+        for indices, block in zip(feature_indices, range(num_blocks)):
+            partialloading = eigenv[indices[0]:indices[1]]
+            w.append(partialloading / np.linalg.norm(partialloading))
+            a.append(np.linalg.norm(partialloading))
+    
+        # 4. Calculate block scores t1, t2, ... as tn = Xn*wn
+        t = []
+        for block, blockloading in zip(Xblocks, w):
+            t.append(np.dot(block, blockloading))
+        
+        # 5. Calculate super scores ts
+        ts = np.dot(X, eigenv)
+        
+        # 6. Calculate v (Y-loading) by projection of ts on Y
+        v = np.dot(Y.T, ts)
+        
+        # 7. Calculate u (Y-scores) 
+        u = np.dot(Y, v)
+    
+        # 8. Deflate X by calculating: Xnew = X - ts*eigenv.T
+        X = X - np.dot(ts, eigenv.T)
+        
+        # 9. Deflate Y by calculating: Ynew = Y - u*eigenvy.T
+        Y = Y - np.dot(u, v.T)
+        
+        # 10. add t, w, u, v, ts and a to T, W, U, V, Ts and A
+        V = np.hstack((V, v))
+        U = np.hstack((U, u))
+        A = np.hstack((A, np.matrix(a).T))
+        Ts = np.hstack((Ts, ts))
+        for block in range(num_blocks):
+            W[block] = np.hstack((W[block], w[block]))
+            T[block] = np.hstack((T[block], t[block]))
             
-    # 1. Concatenate all x blocks
-    Xblocks = X[:]
-    X = np.hstack(X)  
-    
-    # 2. Calculate eigenv (normal pls loading) by SVD(X.T*Y*Y.T*X) --> eigenvector with largest eigenvalue
-    S = np.dot(np.dot(np.dot(X.T,Y),Y.T),X)
-    eigenv = np.linalg.svd(S, full_matrices=full_svd)[0][:,0:1]
-
-    # 3. Calculate block loadings w1, w2, ... , superweights a1, a2, ... 
-    w = []
-    a = []
-    for indices, block in zip(feature_indices, range(num_blocks)):
-        partialloading = eigenv[indices[0]:indices[1]]
-        w.append(partialloading / np.linalg.norm(partialloading))
-        a.append(np.linalg.norm(partialloading))
-
-    # 4. Calculate block scores t1, t2, ... as tn = Xn*wn
-    t = []
-    for block, blockloading in zip(Xblocks, w):
-        t.append(np.dot(block, blockloading))
-    
-    # 5. Calculate super scores ts
-    ts = np.dot(X, eigenv)
-    
-    # 6. Calculate v (Y-loading) by projection of ts on Y
-    v = np.dot(Y.T, ts)
-    
-    # 7. Calculate u (Y-scores) 
-    u = np.dot(Y, v)
-
-    # 8. Deflate X by calculating: Xnew = X - ts*eigenv.T
-    Xnew = X - np.dot(ts, eigenv.T)
-    
-    # 9. Deflate Y by calculating: Ynew = Y - u*eigenvy.T
-    Ynew = Y - np.dot(u, v.T)
-    
-    return eigenv, v, w, a, t, ts
+    return W, T, V, U, A, Ts
         
     
 plt.close('all')
@@ -149,14 +177,17 @@ plotdata(x2, y[:,1:2]); plt.title('Block x2 colored by y[:,1]')
 plt.subplot(236)
 plotdata(x2, y[:,2:3]); plt.title('Block x2 colored by y[:,2]')
 
-eigenv, eigenvy, w, a, t, ts = mbpls([x1_process, x2_process], y_process, n_components=1)
+W, T, V, U, A, Ts = mbpls([x1_process, x2_process], y_process, n_components=2)
+
+# Specify here which Component loadings and scores to plot below
+plot_comp = 1
 
 plt.figure()
 plt.subplot(221)
-plt.plot(w[0]); plt.title('block loading x1\nBlock importance: ' + str(a[0]**2))
+plt.plot(W[0][:,plot_comp]); plt.title('block loading x1\nBlock importance: ' + str(round(A[0,plot_comp]**2, 2)))
 plt.subplot(222)
-plt.plot(w[1]); plt.title('block loading x2\nBlock importance: ' + str(a[1]**2))
+plt.plot(W[1][:,plot_comp]); plt.title('block loading x2\nBlock importance: ' + str(round(A[1,plot_comp]**2, 2)))
 plt.subplot(223)
-plt.plot(t[0]); plt.title('block scores x1')
+plt.plot(T[0][:,plot_comp]); plt.title('block scores x1')
 plt.subplot(224)
-plt.plot(t[1]); plt.title('block scores x2')
+plt.plot(T[1][:,plot_comp]); plt.title('block scores x2')
