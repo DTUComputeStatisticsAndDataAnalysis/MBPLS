@@ -90,8 +90,8 @@ def mbpls(X, Y, n_components, full_svd=True):
         else:
             feature_indices.append(np.array([0,block.shape[1]]))
     
-    #Xblocks = X[:]   
     W = []
+    P = []
     T = []
     V = []
     U = []
@@ -107,6 +107,7 @@ def mbpls(X, Y, n_components, full_svd=True):
 
     # Concatenate X blocks
     X = np.hstack(X)
+    
     for comp in range(n_components):
         # 1. Restore X blocks (for each deflation step)
         Xblocks = []
@@ -123,7 +124,7 @@ def mbpls(X, Y, n_components, full_svd=True):
         for indices, block in zip(feature_indices, range(num_blocks)):
             partialloading = eigenv[indices[0]:indices[1]]
             w.append(partialloading / np.linalg.norm(partialloading))
-            a.append(np.linalg.norm(partialloading))
+            a.append(np.linalg.norm(partialloading)**2)
     
         # 4. Calculate block scores t1, t2, ... as tn = Xn*wn
         t = []
@@ -132,18 +133,20 @@ def mbpls(X, Y, n_components, full_svd=True):
         
         # 5. Calculate super scores ts
         ts = np.dot(X, eigenv)
-        
+                
         # 6. Calculate v (Y-loading) by projection of ts on Y
         v = np.dot(Y.T, ts)
-        
+        v = v / np.linalg.norm(v)
+                
         # 7. Calculate u (Y-scores) 
         u = np.dot(Y, v)
     
-        # 8. Deflate X by calculating: Xnew = X - ts*eigenv.T
-        X = X - np.dot(ts, eigenv.T)
-        
-        # 9. Deflate Y by calculating: Ynew = Y - u*eigenvy.T
-        Y = Y - np.dot(u, v.T)
+        # 8. Deflate X by calculating: Xnew = X - ts*loading (you need to find a loading for deflation by projecting the scores onto X)
+        loading = np.dot(X.T, ts) / np.dot(ts.T, ts)
+        X = X - np.dot(ts, loading.T)
+                
+        # 9. Deflate Y by calculating: Ynew = Y - ts*eigenvy.T (deflation on Y is optional)
+        #Y = Y - np.dot(ts, v.T)
         
         # 10. add t, w, u, v, ts and a to T, W, U, V, Ts and A
         V = np.hstack((V, v))
@@ -154,7 +157,7 @@ def mbpls(X, Y, n_components, full_svd=True):
             W[block] = np.hstack((W[block], w[block]))
             T[block] = np.hstack((T[block], t[block]))
             
-    return W, T, V, U, A, Ts
+    return W, P, T, V, U, A, Ts
         
     
 plt.close('all')
@@ -177,7 +180,7 @@ plotdata(x2, y[:,1:2]); plt.title('Block x2 colored by y[:,1]')
 plt.subplot(236)
 plotdata(x2, y[:,2:3]); plt.title('Block x2 colored by y[:,2]')
 
-W, T, V, U, A, Ts = mbpls([x1_process, x2_process], y_process, n_components=2)
+W, P, T, V, U, A, Ts = mbpls([x1_process, x2_process], y_process[:,0:1], n_components=3)
 
 # Specify here which Component loadings and scores to plot below
 plot_comp = 1
@@ -191,3 +194,16 @@ plt.subplot(223)
 plt.plot(T[0][:,plot_comp]); plt.title('block scores x1')
 plt.subplot(224)
 plt.plot(T[1][:,plot_comp]); plt.title('block scores x2')
+
+
+#%% Scikit Learn PLS
+from sklearn.cross_decomposition import PLSRegression, PLSSVD
+
+pls = PLSRegression(n_components=3, scale=False)
+scikitpls = pls.fit(X=np.hstack((x1_process, x2_process)), Y=y_process[:,0:1])
+scikitscores = scikitpls.x_scores_
+scikitloadings = scikitpls.x_loadings_
+
+#pls = PLSSVD(n_components=3, scale=False)
+#scikitpls = pls.fit(X=np.hstack((x1_process, x2_process)), Y=y_process[:,0:1])
+#scikitscores = scikitpls.x_scores_

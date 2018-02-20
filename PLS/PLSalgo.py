@@ -4,7 +4,7 @@
 Created on Fri Jan  5 10:05:52 2018
 
 - NIPALS PLS according to Westerhuis el al. 1998 and SIMPLS PLS according to Jong 1992
-- 2nd SIMPLS PLS algorithm according to ade4 MBPLS paper
+- UNIPALS PLS algorithm according to ade4 MBPLS paper + Lindgreen et al 1998
 - PLS results are benchmarked to ScikitLearn 0.19.0 PLS algo
 - data from Pectin paper (Baum et al. 2017)
 
@@ -112,7 +112,7 @@ def SIMPLSpls(X, y, num_comp):              # orthogonlization step is missing a
     return loadings, scores, b
 
 
-def SIMPLSpls_ade4(X, y, num_comp):              
+def UNIPALSpls_ade4(X, y, num_comp):              
     from numpy.linalg import norm, svd
     from numpy import dot, empty, hstack
     xloadings = empty((X.shape[1],0))
@@ -123,18 +123,19 @@ def SIMPLSpls_ade4(X, y, num_comp):
     for comp in range(num_comp):
         # Xside
         s = dot(dot(dot(X.T,y),y.T),X)
-        p = svd(s)[0][:,0:1]
-        t = dot(X,p)
-        xloadings = hstack((xloadings, p))
-        xscores = hstack((xscores, t))
+        w = svd(s)[0][:,0:1]
+        t = dot(X,w)
         # Yside (as projection of t on y)
         v = dot(y.T,t)     
         u = dot(y,v)
         yloadings = hstack((yloadings, v))
         yscores = hstack((yscores, u))
         # deflate on X and Y
+        p = dot(X.T, t) / np.dot(t.T, t)
         X = X - dot(t,p.T)
         y = y - dot(t,v.T) 
+        xloadings = hstack((xloadings, p))
+        xscores = hstack((xscores, t))
     
     return xloadings, xscores, yloadings, yscores
 
@@ -159,7 +160,7 @@ plotdata(SIMPLSloadings.T, np.array([0.5, 0.5]))
 plt.title('deJong SIMPLS PLS loadings')
 
 plt.figure()
-SIMPLSade4loadings, SIMPLSade4scores, ade4yloadings, ade4yscores = SIMPLSpls_ade4(spectra_preprocessed, yields_preprocessed, num_comp=2)
+SIMPLSade4loadings, UNIPALSade4scores, ade4yloadings, ade4yscores = SIMPLSpls_ade4(spectra_preprocessed, yields_preprocessed, num_comp=2)
 plotdata(SIMPLSade4loadings.T, np.array([0.5, 0.5]))
 plt.title('ade4 SIMPLS PLS loadings')
 
