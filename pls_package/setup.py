@@ -10,7 +10,7 @@
 
 from setuptools import setup, find_packages
 
-from pls_package import all_pls
+import all_pls
 
 NAME = "universal-pls"
 DESCRIPTION = "A set of several partial least squares algorithms"
