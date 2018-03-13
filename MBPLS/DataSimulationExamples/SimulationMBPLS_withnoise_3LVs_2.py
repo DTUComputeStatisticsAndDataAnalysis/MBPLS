@@ -1,60 +1,67 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jan 15 14:31:48 2018
+Created on Wed Feb 28 09:58:07 2018
 
-data from University of Copenhagen, Frans van den Berg
-http://www.models.life.ku.dk/~courses/MBtoolbox/mbtmain.htm
-
-info from data origin:
-X (objects x all X-block variables) one, augmented data matrix with all the X-blocks
-Xin (number of X-blocks x 2 = first and last variable per block) index for X-blocks
-(optional:)
-Xpp (number of X-blocks x 3) processing per X-block
- - first entry scaling: 0=do not scale to sum-of-squares, number=scale to sum-of-squares
- - second entry preprocessing: 0=none, 1=mean centering, 2=auto scaling
- - third entry = number of factors to compute for this X-block
-Y (objects x all Y-block variables) one, augmented data matrix with all the Y-blocks
-Yin (number of Y-blocks x 2 = first and last variable per block) index for Y-blocks
- - if omitted, one Y-block is assumed
-Ypp (number of Y-blocks x 1) preprocessing per Y-block: 0=none, 1=mean centering, 2=auto scaling
-Model (1 x 2) first entry : 0 = no cross validation (default), 1 = cross validation; 
-  second entry overrides default modeling methods (MBCPCA for X, MBSPLS for X and Y)
-- 0=MBCPCA, 1=MBPCA, 2=MBHPCA
-- 10=MBSPLS, 11=MBBPLS, 12=MBHPLS
-
-@author: Andreas Baum, andba@dtu.dk
+@author: andba
 """
 
-from matplotlib import pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
+from scipy.stats import ortho_group
 
-def loaddata():
-    from scipy.io import loadmat
-    from pylab import log10
-    path = '/home/andba/Documents/Projects/DTU Compute/Novozymes BigData/MBPLS Package development/MBPLS/'
-    data = loadmat(path+'MBdata.mat')
-    y = data['Y']
-    x1 = data['X'][:,:50]
-    x2 = data['X'][:,50:]
-    return x1, x2, y
+#plt.close('all')
 
-
-def plotdata(spectra, yields):
-    yields = yields + abs(yields.min())
-    for spectrum, yield1 in zip(spectra,yields/yields.max()):
-        plt.plot(spectrum.T,color=[0,0,yield1],linewidth=6)
+num_vars_x1 = 20
+num_vars_x2 = 120
+num_samples = 75
+rand_seed = 16
+remove_orth = False
 
 
-def preprocess(spectra,yields):
-    from sklearn.preprocessing import StandardScaler
-    Scaler1 = StandardScaler(with_mean=True,with_std=False)
-    Scaler2 = StandardScaler(with_mean=True,with_std=True)
-    return Scaler1.fit_transform(spectra), Scaler2.fit_transform(yields) 
+np.random.seed(rand_seed)
+
+#construct loadings
+def makesinloading(num_vars):
+    temp = np.linspace(0,np.pi,num_vars)
+    return np.matrix(np.sin(temp)).T
+
+def makesin2loading(num_vars):
+    temp = np.linspace(0,np.pi,num_vars)
+    return np.matrix(np.sin(temp)).T
+
+def makedata(loading, y):
+    return np.dot(loading, y.T)
+
+def addnoise(x, amount):
+    return x + np.random.normal(loc=0,scale=amount,size=x.shape)
+
+#make orthonormal scores and generate xblock data from them
+var = ortho_group.rvs(num_samples, random_state=rand_seed)
+var3 = np.random.rand(num_samples, 1)   # non-orthogonal scores as reference
+#y = np.array([[0,0,0,0,0,1,2,3,4,5,0,0,0,0,0],[5,4,3,2,1,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,2,3,2,4,5]]).T
+y = np.concatenate((var[:,:2], var3[:,:1]),axis=1)
+#y = var[:,:3]
+
+#Loadings related to blocks x1 and x2 do not have to be orthogonal
+loading1_x1 = makesinloading(num_vars_x1)
+loading1_x1 = loading1_x1 / np.linalg.norm(loading1_x1)
+loading1_x2 = makesin2loading(num_vars_x2)
+loading1_x2 = loading1_x2 / np.linalg.norm(loading1_x2)
+x1 = makedata(loading1_x1, y[:,0:1]) + makedata(loading1_x1*0.8, y[:,2:3])
+x2 = makedata(loading1_x2, y[:,1:2]) + makedata(loading1_x2*1.2, y[:,2:3])
+
+#optionally add gaussian noise
+x1 = addnoise(x1,0*x1.max())
+x2 = addnoise(x2,0*x2.max())
+
+plt.figure()
+plt.plot(np.concatenate((x1,x2)))
+
 
 def mbpls(X, Y, n_components, full_svd=True):
     """Multiblock PLS regression with nomenclature as described in Bougeard et al 2001 (R package: ade4 mbpls function authors)
-        
+    
     ----------
     
     X : list 
@@ -124,7 +131,7 @@ def mbpls(X, Y, n_components, full_svd=True):
         for indices, block in zip(feature_indices, range(num_blocks)):
             partialloading = eigenv[indices[0]:indices[1]]
             w.append(partialloading / np.linalg.norm(partialloading))
-            a.append(np.linalg.norm(partialloading))
+            a.append(np.linalg.norm(partialloading)**2)
     
         # 4. Calculate block scores t1, t2, ... as tn = Xn*wn
         t = []
@@ -156,54 +163,61 @@ def mbpls(X, Y, n_components, full_svd=True):
         for block in range(num_blocks):
             W[block] = np.hstack((W[block], w[block]))
             T[block] = np.hstack((T[block], t[block]))
+        
+        #plt.plot(eigenv)
             
     return W, P, T, V, U, A, Ts
-        
+
+#%% remove orthogonal information to y in x blocks (e.g. added noise)
+if remove_orth:
+    which_y = 0
+    x = np.concatenate((x1.T,x2.T),axis=1)
+    corr = np.dot(np.dot(y[:,which_y:which_y+1],np.linalg.pinv(y[:,which_y:which_y+1])),x)
+    x = x-corr
+    #plt.figure()
+    #plt.plot(x.T)
+    x1 = x[:,0:num_vars_x1].T
+    x2 = x[:,num_vars_x1:num_vars_x1+num_vars_x2].T
     
-plt.close('all')
-x1, x2, y = loaddata()
-x1_process, y_process = preprocess(x1, y)
-x2_process, y_process = preprocess(x2, y)
+if remove_orth:
+    which_y = 1
+    x = np.concatenate((x1.T,x2.T),axis=1)
+    corr = np.dot(np.dot(y[:,which_y:which_y+1],np.linalg.pinv(y[:,which_y:which_y+1])),x)
+    x = x-corr
+    plt.figure()
+    plt.plot(x.T)
+    x1 = x[:,0:num_vars_x1].T
+    x2 = x[:,num_vars_x1:num_vars_x1+num_vars_x2].T
 
-# Plot preprocessed datablocks X1 and X2 colored according to y1, y2, y3
-plt.subplot(231)
-plotdata(x1, y[:,0:1]); plt.title('Block x1 colored by y[:,0]')
-plt.subplot(232)
-plotdata(x1, y[:,1:2]); plt.title('Block x1 colored by y[:,1]')
-plt.subplot(233)
-plotdata(x1, y[:,2:3]); plt.title('Block x1 colored by y[:,2]')
+#%%
 
-plt.subplot(234)
-plotdata(x2, y[:,0:1]); plt.title('Block x2 colored by y[:,0]')
-plt.subplot(235)
-plotdata(x2, y[:,1:2]); plt.title('Block x2 colored by y[:,1]')
-plt.subplot(236)
-plotdata(x2, y[:,2:3]); plt.title('Block x2 colored by y[:,2]')
+# Perform MBPLS (do not center or scale --> destroys orthogonality in Y and/or creates offset between X and Y)
+W, P, T, V, U, A, Ts = mbpls([x1.T, x2.T], y[:,2:3], n_components=1)
 
-W, P, T, V, U, A, Ts = mbpls([x1_process, x2_process], y_process[:,0:1], n_components=2)
-
-# Specify here which Component loadings and scores to plot below
-plot_comp = 1
-
+plot_comp = 0
 plt.figure()
-plt.subplot(221)
-plt.plot(W[0][:,plot_comp]); plt.title('block loading x1\nBlock importance: ' + str(round(A[0,plot_comp]**2, 2)))
-plt.subplot(222)
-plt.plot(W[1][:,plot_comp]); plt.title('block loading x2\nBlock importance: ' + str(round(A[1,plot_comp]**2, 2)))
-plt.subplot(223)
+plt.subplot(321)
+plt.plot(W[0][:,plot_comp]); plt.title('block loading x1\nBlock importance: ' + str(round(A[0,plot_comp], 2)))
+plt.subplot(322)
+plt.plot(W[1][:,plot_comp]); plt.title('block loading x2\nBlock importance: ' + str(round(A[1,plot_comp], 2)))
+plt.subplot(323)
 plt.plot(T[0][:,plot_comp]); plt.title('block scores x1')
-plt.subplot(224)
+plt.subplot(324)
 plt.plot(T[1][:,plot_comp]); plt.title('block scores x2')
+plt.subplot(325)
+plt.scatter(y[:,0], np.array(T[0][:,0])); plt.title('known y%s versus block%s scores' % (plot_comp+1, plot_comp+1))
 
-
-#%% Scikit Learn PLS
-from sklearn.cross_decomposition import PLSRegression, PLSSVD
-
-pls = PLSRegression(n_components=3, scale=False)
-scikitpls = pls.fit(X=np.hstack((x1_process, x2_process)), Y=y_process[:,0:1])
-scikitscores = scikitpls.x_scores_
-scikitloadings = scikitpls.x_loadings_
-
-#pls = PLSSVD(n_components=3, scale=False)
-#scikitpls = pls.fit(X=np.hstack((x1_process, x2_process)), Y=y_process[:,0:1])
-#scikitscores = scikitpls.x_scores_
+"""
+plot_comp = 1
+plt.figure()
+plt.subplot(321)
+plt.plot(W[0][:,plot_comp]); plt.title('block loading x1\nBlock importance: ' + str(round(A[0,plot_comp], 2)))
+plt.subplot(322)
+plt.plot(W[1][:,plot_comp]); plt.title('block loading x2\nBlock importance: ' + str(round(A[1,plot_comp], 2)))
+plt.subplot(323)
+plt.plot(T[0][:,plot_comp]); plt.title('block scores x1')
+plt.subplot(324)
+plt.plot(T[1][:,plot_comp]); plt.title('block scores x2')
+plt.subplot(325)
+plt.scatter(y[:,0], np.array(T[0][:,0])); plt.title('known y%s versus block%s scores' % (plot_comp+1, plot_comp+1))
+"""
