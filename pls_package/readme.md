@@ -15,7 +15,7 @@
         * Move to /directory/to/MBPLS
         * `$ pip install -e pls_package`
     * Add the directory to your systempath
-        * `$ export $PYTHONPATH=$PYTHONPATH:/directory/to/MBPLS`
+        * `$ export PYTHONPATH="/directory/to/MBPLS:$PYTHONPATH"
 * Enjoy
 
 author: Laurent Vermue, lauve@dtu.dk
