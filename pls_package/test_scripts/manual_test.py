@@ -33,7 +33,7 @@ from pls_package.all_pls.data.get_filepath import data_path
 from pls_package.all_pls.mbpls import MBPLS
 import numpy as np
 
-plt.ion()
+plt.ioff()
 
 def loaddata():
     from scipy.io import loadmat
@@ -74,27 +74,16 @@ plt.subplot(235)
 plotdata(x2, y[:,1:2]); plt.title('Block x2 colored by y[:,1]')
 plt.subplot(236)
 plotdata(x2, y[:,2:3]); plt.title('Block x2 colored by y[:,2]')
+plt.show()
 
 # Here follows the calculation
-
 
 pls_own = MBPLS(n_components=2)
 
 pls_own.fit([x1_process, x2_process], y_process[:,0:1])
 
 # Specify here which Component loadings and scores to plot below
-plot_comp = 1
-
-plt.figure()
-plt.subplot(221)
-plt.plot(pls_own.W[0][:,plot_comp]); plt.title('block loading x1\nBlock importance: ' + str(round(pls_own.A[0,plot_comp]**2, 2)))
-plt.subplot(222)
-plt.plot(pls_own.W[1][:,plot_comp]); plt.title('block loading x2\nBlock importance: ' + str(round(pls_own.A[1,plot_comp]**2, 2)))
-plt.subplot(223)
-plt.plot(pls_own.T[0][:,plot_comp]); plt.title('block scores x1')
-plt.subplot(224)
-plt.plot(pls_own.T[1][:,plot_comp]); plt.title('block scores x2')
-
+pls_own.plot(1)
 
 #%% Scikit Learn PLS
 from sklearn.cross_decomposition import PLSRegression

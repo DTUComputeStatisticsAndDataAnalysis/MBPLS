@@ -1,3 +1,9 @@
+**14.03.18**
+
+- Replaced old MBPLS-Algorithm
+- Adjusted manual test script
+- Added orthogonal data function to data module
+
 **13.03.18**
 
 - Python package structure and OOP implementation of MBPLS
@@ -6,6 +12,8 @@
 
 - [ ] code cleanup
 - [ ] Transfer all algorithms to OOP and align structure
+- [x] Plot method in MBPLS-Class
+- [x] Transfer MBPLS_Lindgreen to PLS-Class
 
 **Testing the package**
 
@@ -16,6 +24,6 @@
         * `$ pip install -e pls_package`
     * Add the directory to your systempath
         * `$ export PYTHONPATH="/directory/to/MBPLS:$PYTHONPATH"
-* Enjoy
+* Now you can import 
 
 author: Laurent Vermue, lauve@dtu.dk
