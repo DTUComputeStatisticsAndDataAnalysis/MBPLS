@@ -50,27 +50,27 @@ def preprocess(spectra,yields):
     from sklearn.preprocessing import StandardScaler
     Scaler1 = StandardScaler(with_mean=True,with_std=False)
     Scaler2 = StandardScaler(with_mean=True,with_std=True)
-    return Scaler1.fit_transform(spectra), Scaler2.fit_transform(yields) 
+    return Scaler1.fit_transform(spectra), Scaler2.fit_transform(yields)
 
 def mbpls(X, Y, n_components, full_svd=True):
     """Multiblock PLS regression
-    
+
     - super scores are normalized to length 1 (not done in R package ade4)
     - N > P run SVD(X'YY'X) --> PxP matrix
     - N < P run SVD(XX'YY') --> NxN matrix (Lindgreen et al. 1998)
     - to do: export regression vector b
-    
+
     ----------
-    
-    X : list 
+
+    X : list
         of all xblocks x1, x2, ..., xn. Rows are observations, columns are features/variables
     Y : array
         1-dim or 2-dim array of reference values
     n_components : int
         Number of Latent Variables.
-    
+
     """
-    
+
     """
     X side:
     Ts - super scores
@@ -88,15 +88,15 @@ def mbpls(X, Y, n_components, full_svd=True):
     """
     import numpy as np
     num_blocks = len(X)
-    
+
     # Store start/end feature indices for all x blocks
     feature_indices = []
     for block in X:
-        if len(feature_indices) > 0: 
+        if len(feature_indices) > 0:
             feature_indices.append(np.array([feature_indices[-1][1], feature_indices[-1][1] + block.shape[1]]))
         else:
             feature_indices.append(np.array([0,block.shape[1]]))
-    
+
     W = []
     T = []
     V = []
@@ -105,62 +105,62 @@ def mbpls(X, Y, n_components, full_svd=True):
     V = np.empty((Y.shape[1],0))
     U = np.empty((Y.shape[0],0))
     Ts = np.empty((Y.shape[0],0))
-    
+
     for block in range(num_blocks):
         W.append(np.empty((X[block].shape[1],0)))
         T.append(np.empty((X[block].shape[0],0)))
-        
+
 
     # Concatenate X blocks
     X = np.hstack(X)
-    
+
     P = np.empty((X.shape[1],0))
     weights = np.empty((X.shape[1],0))
-    
+
     num_samples = X.shape[0]
     num_features = X.shape[1]
-    if num_samples > num_features:
+    if num_samples >= num_features:
         for comp in range(n_components):
             # 1. Restore X blocks (for each deflation step)
             Xblocks = []
             for indices in feature_indices:
                 Xblocks.append(X[:,indices[0]:indices[1]])
-            
+
             # 2. Calculate eigenv (normal pls weights) by SVD(X'YY'X) --> eigenvector with largest eigenvalue
             S = np.dot(np.dot(np.dot(X.T,Y),Y.T),X)
             eigenv = np.linalg.svd(S, full_matrices=full_svd)[0][:,0:1]
-            
-            # 3. Calculate block loadings w1, w2, ... , superweights a1, a2, ... 
+
+            # 3. Calculate block loadings w1, w2, ... , superweights a1, a2, ...
             w = []
             a = []
             for indices, block in zip(feature_indices, range(num_blocks)):
                 partialloading = eigenv[indices[0]:indices[1]]
                 w.append(partialloading / np.linalg.norm(partialloading))
                 a.append(np.linalg.norm(partialloading))
-        
+
             # 4. Calculate block scores t1, t2, ... as tn = Xn*wn
             t = []
             for block, blockloading in zip(Xblocks, w):
                 t.append(np.dot(block, blockloading))
-            
+
             # 5. Calculate super scores ts
             ts = np.dot(X, eigenv)
             ts = ts / np.linalg.norm(ts)
-                    
+
             # 6. Calculate v (Y-loading) by projection of ts on Y
             v = np.dot(Y.T, ts)
             v = v / np.linalg.norm(v)
-                    
-            # 7. Calculate u (Y-scores) 
+
+            # 7. Calculate u (Y-scores)
             u = np.dot(Y, v)
-            
+
             # 8. Deflate X by calculating: Xnew = X - ts*loading (you need to find a loading for deflation by projecting the scores onto X)
             loading = np.dot(X.T, ts) / np.sqrt(np.dot(ts.T, ts))
             X = X - np.dot(ts, loading.T)
-                    
+
             # 9. Deflate Y by calculating: Ynew = Y - ts*eigenvy.T (deflation on Y is optional)
             #Y = Y - np.dot(ts, v.T)
-            
+
             # 10. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
             V = np.hstack((V, v))
             U = np.hstack((U, u))
@@ -171,55 +171,55 @@ def mbpls(X, Y, n_components, full_svd=True):
             for block in range(num_blocks):
                 W[block] = np.hstack((W[block], w[block]))
                 T[block] = np.hstack((T[block], t[block]))
-                
+
             pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(P.T, weights)))
             pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(Ts.T,Ts)))
             pseudoinv = np.dot(pseudoinv, Ts.T)
             beta = np.dot(pseudoinv, Y)
-    
-    
+
+
     if num_features > num_samples:
             for comp in range(n_components):
                 # 1. Restore X blocks (for each deflation step)
                 Xblocks = []
                 for indices in feature_indices:
                     Xblocks.append(X[:,indices[0]:indices[1]])
-                
+
                 # 2. Calculate ts by SVD(XX'YY') --> eigenvector with largest eigenvalue
                 S = np.dot(np.dot(np.dot(X, X.T),Y),Y.T)
                 ts = np.linalg.svd(S, full_matrices=full_svd)[0][:,0:1]
-                
+
                 # 3. Calculate v (Y-loading) by projection of ts on Y
                 v = np.dot(Y.T, ts)
                 v = v / np.linalg.norm(v)
-                        
-                # 4. Calculate u (Y-scores) 
+
+                # 4. Calculate u (Y-scores)
                 u = np.dot(Y, v)
-                
+
                 # 5. Calculate weights eigenv
                 eigenv = np.dot(X.T, u)
                 eigenv = eigenv / np.linalg.norm(eigenv)
-                
-                # 6. Calculate block loadings w1, w2, ... , superweights a1, a2, ... 
+
+                # 6. Calculate block loadings w1, w2, ... , superweights a1, a2, ...
                 w = []
                 a = []
                 for indices, block in zip(feature_indices, range(num_blocks)):
                     partialloading = eigenv[indices[0]:indices[1]]
                     w.append(partialloading / np.linalg.norm(partialloading))
                     a.append(np.linalg.norm(partialloading))
-            
+
                 # 7. Calculate block scores t1, t2, ... as tn = Xn*wn
                 t = []
                 for block, blockloading in zip(Xblocks, w):
                     t.append(np.dot(block, blockloading))
-                
+
                 # 8. Deflate X by calculating: Xnew = X - ts*loading (you need to find a loading for deflation by projecting the scores onto X)
                 loading = np.dot(X.T, ts) / np.sqrt(np.dot(ts.T, ts))
                 X = X - np.dot(ts, loading.T)
-                        
+
                 # 9. Deflate Y by calculating: Ynew = Y - ts*eigenvy.T (deflation on Y is optional)
                 #Y = Y - np.dot(ts, v.T)
-                
+
                 # 10. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
                 V = np.hstack((V, v))
                 U = np.hstack((U, u))
@@ -231,12 +231,12 @@ def mbpls(X, Y, n_components, full_svd=True):
                 for block in range(num_blocks):
                     W[block] = np.hstack((W[block], w[block]))
                     T[block] = np.hstack((T[block], t[block]))
-                
+
                 pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(P.T, weights)))
                 pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(Ts.T,Ts)))
                 pseudoinv = np.dot(pseudoinv, Ts.T)
                 beta = np.dot(pseudoinv, Y)
-        
+
     return W, P, T, V, U, A, Ts, beta
         
     
