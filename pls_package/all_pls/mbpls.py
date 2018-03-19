@@ -104,7 +104,7 @@ class MBPLS(BaseEstimator, FitTransform):
 
         num_samples = X.shape[0]
         num_features = X.shape[1]
-        if num_samples > num_features:
+        if num_samples >= num_features:
             for comp in range(self.n_components):
                 # 1. Restore X blocks (for each deflation step)
                 Xblocks = []
@@ -157,7 +157,7 @@ class MBPLS(BaseEstimator, FitTransform):
                     self.W[block] = np.hstack((self.W[block], w[block]))
                     self.T[block] = np.hstack((self.T[block], t[block]))
 
-                pseudoinv = np.dot(self.weights, np.linalg.pinv(np.dot(self.P.T, weights)))
+                pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P.T, weights)))
                 pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts.T, self.Ts)))
                 pseudoinv = np.dot(pseudoinv, self.Ts.T)
                 self.beta = np.dot(pseudoinv, Y)
@@ -236,15 +236,15 @@ class MBPLS(BaseEstimator, FitTransform):
         from matplotlib import pyplot as plt
         plt.figure()
         plt.subplot(221)
-        plt.plot(self.W[0][:, component])
-        plt.title('block loading x1\nBlock importance: ' + str(round(self.A[0, component] ** 2, 2)))
+        plt.plot(self.W[0][:, component-1])
+        plt.title('block loading x1\nBlock importance: ' + str(round(self.A[0, component-1] ** 2, 2)))
         plt.subplot(222)
-        plt.plot(self.W[1][:, component])
-        plt.title('block loading x2\nBlock importance: ' + str(round(self.A[1, component] ** 2, 2)))
+        plt.plot(self.W[1][:, component-1])
+        plt.title('block loading x2\nBlock importance: ' + str(round(self.A[1, component-1] ** 2, 2)))
         plt.subplot(223)
-        plt.plot(self.T[0][:, component])
+        plt.plot(self.T[0][:, component-1])
         plt.title('block scores x1')
         plt.subplot(224)
-        plt.plot(self.T[1][:, component])
+        plt.plot(self.T[1][:, component-1])
         plt.title('block scores x2')
         plt.show()

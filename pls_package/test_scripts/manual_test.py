@@ -27,7 +27,6 @@ Model (1 x 2) first entry : 0 = no cross validation (default), 1 = cross validat
 @edited: Laurent Vermue, lauve@dtu.dk
 """
 
-
 from matplotlib import pyplot as plt
 from pls_package.all_pls.data.get_filepath import data_path
 from pls_package.all_pls.mbpls import MBPLS
