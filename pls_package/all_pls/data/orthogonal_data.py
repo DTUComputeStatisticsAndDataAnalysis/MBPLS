@@ -32,6 +32,7 @@ def get_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, pa
     X_3 = Third X-block - Dimensionality ( num_of_samples, params_block_three*(num_of_variables_main_lin_comb+1), num_of_batches)
     Y = Y-block - Dimensionality (num_of_samples, 2, num_of_batches)
     """
+    # TODO: X = y * weight_vector
 
     total_params = params_block_one + params_block_three + params_block_two
 
@@ -43,6 +44,12 @@ def get_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, pa
     ''' Constructing two different vectors that are
     linear combinations of the main orthogonal variables'''
     lin_vec_1 = np.arange(0, total_params * 0.1, 0.1)
+    temp_vec = lin_vec_1[0:8]
+    temp_vec[0] = 2
+    temp_vec = temp_vec / np.linalg.norm(temp_vec)
+    np.linalg.norm(temp_vec[0:4]) ** 2
+    np.linalg.norm(temp_vec[4:9]) ** 2
+    lin_vec_1[0:8] = temp_vec
     lin_vec_2 = np.arange(total_params * 0.1 - 0.1, -0.1, -0.1)
 
     # Constructing X blocks
@@ -77,4 +84,7 @@ def get_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, pa
     y1 = np.einsum('j,klj->kl', lin_vec_1, X[:, :, 0:total_params])
     y2 = np.einsum('j,klj->kl', lin_vec_2, X[:, :, 0:total_params])
     Y = np.stack((y1, y2), -1)
-    return X_1_complete, X_2_complete, X_3_complete, Y
+    if num_of_batches == 1:
+        return np.squeeze(X_1_complete), np.squeeze(X_2_complete), np.squeeze(X_3_complete), np.squeeze(Y)
+    else:
+        return X_1_complete, X_2_complete, X_3_complete, Y

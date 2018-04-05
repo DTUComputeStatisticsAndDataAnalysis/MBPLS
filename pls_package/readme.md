@@ -25,6 +25,6 @@
     * Add the directory to your systempath
         * `$ export PYTHONPATH="/directory/to/MBPLS:$PYTHONPATH"
 * Now you can import the MBPLS function by typing\
-`from pls_package.all_pls.mbpls import MBPLS`
+`from all_pls.mbpls import MBPLS`
 
 author: Laurent Vermue, lauve@dtu.dk

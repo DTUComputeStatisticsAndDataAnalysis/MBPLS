@@ -12,7 +12,7 @@ from setuptools import setup, find_packages
 
 import all_pls
 
-NAME = "universal-pls"
+NAME = "unipls"
 DESCRIPTION = "A set of several partial least squares algorithms"
 VERSION = all_pls.__version__
 AUTHORS = "Andreas Baum, Laurent Vermue"

@@ -78,6 +78,7 @@ plt.show()
 # Here follows the calculation
 
 pls_own = MBPLS(n_components=2)
+#pls_own = MBPLS(n_components=2, method='NIPALS')
 
 pls_own.fit([x1_process, x2_process], y_process[:,0:1])
 
