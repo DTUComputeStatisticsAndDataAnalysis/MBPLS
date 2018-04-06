@@ -70,7 +70,7 @@ class MBPLS(BaseEstimator, FitTransform):
 
     """
 
-    def __init__(self, n_components, method='Lindgren', full_svd=True):
+    def __init__(self, n_components, method='SVD', full_svd=True):
         self.n_components = n_components
         self.full_svd = full_svd
         self.method = method
@@ -107,7 +107,7 @@ class MBPLS(BaseEstimator, FitTransform):
         self.P = np.empty((X.shape[1], 0))
         weights = np.empty((X.shape[1], 0))
 
-        if self.method == 'Lindgren':
+        if self.method == 'SVD':
             num_samples = X.shape[0]
             num_features = X.shape[1]
 
@@ -232,7 +232,7 @@ class MBPLS(BaseEstimator, FitTransform):
                     self.beta = np.dot(pseudoinv, Y)
 
             return self
-        # TODO: NIPALS
+        # TODO: Code cleanup BIG TIME!
         elif self.method=='NIPALS':
             blocks = collections.defaultdict(dict)
             for block in range(self.num_blocks):
@@ -253,7 +253,10 @@ class MBPLS(BaseEstimator, FitTransform):
                     # 2. Regress block weights against rows of each block
                     for block in range(self.num_blocks):
                         # FIXME: Is this really supposed to be divided by the number of variables?
-                        blocks[block].update({"scores": np.dot(blocks[block]["X"], blocks[block]["weights"]) / np.sqrt(blocks[block]["X"].shape[1])})
+                        #blocks[block].update({"scores": np.dot(blocks[block]["X"], blocks[block]["weights"]) / np.sqrt(blocks[block]["X"].shape[1])})
+                        # Temporary trial using a normal regression formula
+                        blocks[block].update({"scores": np.dot(blocks[block]["X"], blocks[block]["weights"]) / \
+                                                        np.dot(blocks[block]["weights"].T, blocks[block]["weights"])})
                     # 3. Append all block scores in T
                     for block in range(self.num_blocks):
                         try:
@@ -266,6 +269,7 @@ class MBPLS(BaseEstimator, FitTransform):
                     superweights = superweights / np.linalg.norm(superweights)
                     # 5. Regress superweights against T to obtain superscores
                     superscores = np.dot(T, superweights) / np.dot(superweights.T, superweights)
+                    superscores = superscores / np.linalg.norm(superscores)
                     if run == 1:
                         pass
                     else:
