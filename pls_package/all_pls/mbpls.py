@@ -93,6 +93,7 @@ class MBPLS(BaseEstimator, FitTransform):
         self.W = []
         self.T = []
         self.A = np.empty((self.num_blocks, 0))
+        self.A_corrected = np.empty((self.num_blocks, 0))
         self.V = np.empty((Y.shape[1], 0))
         self.U = np.empty((Y.shape[0], 0))
         self.Ts = np.empty((Y.shape[0], 0))
@@ -130,7 +131,7 @@ class MBPLS(BaseEstimator, FitTransform):
                     for indices, block in zip(feature_indices, range(self.num_blocks)):
                         partialloading = eigenv[indices[0]:indices[1]]
                         w.append(partialloading / np.linalg.norm(partialloading))
-                        a.append(np.linalg.norm(partialloading))
+                        a.append(np.linalg.norm(partialloading)**2)                     # changed here!
 
                     # 4. Calculate block scores t1, t2, ... as tn = Xn*wn
                     t = []
@@ -156,10 +157,23 @@ class MBPLS(BaseEstimator, FitTransform):
                     # 9. Deflate Y by calculating: Ynew = Y - ts*eigenvy.T (deflation on Y is optional)
                     # Y = Y - np.dot(ts, v.T)
 
-                    # 10. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
+                    # 10. Upweight Block Importances of blocks with less features
+                    sum_vars = []
+                    for vector in w:
+                        sum_vars.append(len(vector))
+                    
+                    a_corrected = []
+                    for bip, sum_var in zip(a, sum_vars):
+                        factor = 1 - sum_var / np.sum(sum_vars)
+                        a_corrected.append(bip * factor)
+                    
+                    a_corrected = list(a_corrected / np.sum(a_corrected))
+
+                    # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
                     self.V = np.hstack((self.V, v))
                     self.U = np.hstack((self.U, u))
                     self.A = np.hstack((self.A, np.matrix(a).T))
+                    self.A_corrected = np.hstack((self.A_corrected, np.matrix(a_corrected).T))
                     self.Ts = np.hstack((self.Ts, ts))
                     self.P = np.hstack((self.P, loading))
                     weights = np.hstack((weights, eigenv))
@@ -200,7 +214,7 @@ class MBPLS(BaseEstimator, FitTransform):
                     for indices, block in zip(feature_indices, range(self.num_blocks)):
                         partialloading = eigenv[indices[0]:indices[1]]
                         w.append(partialloading / np.linalg.norm(partialloading))
-                        a.append(np.linalg.norm(partialloading))
+                        a.append(np.linalg.norm(partialloading)**2)                 # changed here!
 
                     # 7. Calculate block scores t1, t2, ... as tn = Xn*wn
                     t = []
@@ -214,10 +228,24 @@ class MBPLS(BaseEstimator, FitTransform):
                     # 9. Deflate Y by calculating: Ynew = Y - ts*eigenvy.T (deflation on Y is optional)
                     # Y = Y - np.dot(ts, v.T)
 
-                    # 10. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
+                    # 10. Upweight Block Importances of blocks with less features
+                    sum_vars = []
+                    for vector in w:
+                        sum_vars.append(len(vector))
+                    
+                    a_corrected = []
+                    for bip, sum_var in zip(a, sum_vars):
+                        factor = 1 - sum_var / np.sum(sum_vars)
+                        a_corrected.append(bip * factor)
+                    
+                    a_corrected = list(a_corrected / np.sum(a_corrected))
+                
+                    
+                    # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
                     self.V = np.hstack((self.V, v))
                     self.U = np.hstack((self.U, u))
                     self.A = np.hstack((self.A, np.matrix(a).T))
+                    self.A_corrected = np.hstack((self.A_corrected, np.matrix(a_corrected).T))
                     self.Ts = np.hstack((self.Ts, ts))
                     self.P = np.hstack((self.P, loading))
                     weights = np.hstack((weights, eigenv))
