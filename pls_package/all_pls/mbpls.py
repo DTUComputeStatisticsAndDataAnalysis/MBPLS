@@ -3,31 +3,7 @@
 """
 Created on Mon Jan 15 14:31:48 2018
 
-data from University of Copenhagen, Frans van den Berg
-http://www.models.life.ku.dk/~courses/MBtoolbox/mbtmain.htm
-
-info from data origin:
-X (objects x all X-block variables) one, augmented data matrix with all the X-blocks
-Xin (number of X-blocks x 2 = first and last variable per block) index for X-blocks
-(optional:)
-Xpp (number of X-blocks x 3) processing per X-block
- - first entry scaling: 0=do not scale to sum-of-squares, number=scale to sum-of-squares
- - second entry preprocessing: 0=none, 1=mean centering, 2=auto scaling
- - third entry = number of factors to compute for this X-block
-Y (objects x all Y-block variables) one, augmented data matrix with all the Y-blocks
-Yin (number of Y-blocks x 2 = first and last variable per block) index for Y-blocks
- - if omitted, one Y-block is assumed
-Ypp (number of Y-blocks x 1) preprocessing per Y-block: 0=none, 1=mean centering, 2=auto scaling
-
-Model (1 x 2) first entry : 0 = no cross validation (default), 1 = cross validation;
-  second entry overrides default modeling methods (MBCPCA for X, MBSPLS for X and Y)
-
-- 0=MBCPCA, 1=MBPCA, 2=MBHPCA
-
-- 10=MBSPLS, 11=MBBPLS, 12=MBHPLS
-
-@author: Andreas Baum, andba@dtu.dk
-edited: Laurent Vermue, lauve@dtu.dk
+@authors: Andreas Baum, andba@dtu.dk; Laurent Vermue, lauve@dtu.dk
 
 """
 
@@ -97,6 +73,7 @@ class MBPLS(BaseEstimator, FitTransform):
         self.V = np.empty((Y.shape[1], 0))
         self.U = np.empty((Y.shape[0], 0))
         self.Ts = np.empty((Y.shape[0], 0))
+        self.explained_var_y = []
 
         for block in range(self.num_blocks):
             self.W.append(np.empty((X[block].shape[1], 0)))
@@ -111,7 +88,6 @@ class MBPLS(BaseEstimator, FitTransform):
         if self.method == 'SVD':
             num_samples = X.shape[0]
             num_features = X.shape[1]
-
 
             if num_samples >= num_features:
                 for comp in range(self.n_components):
@@ -144,29 +120,29 @@ class MBPLS(BaseEstimator, FitTransform):
                     ts = ts / np.linalg.norm(ts)
 
                     # 6. Calculate v (Y-loading) by projection of ts on Y
-                    v = np.dot(Y.T, ts)
-                    v = v / np.linalg.norm(v)
+                    v = np.dot(Y.T, ts) / np.dot(ts.T, ts)
 
                     # 7. Calculate u (Y-scores)
                     u = np.dot(Y, v)
+                    u = u / np.linalg.norm(u)
 
                     # 8. Deflate X by calculating: Xnew = X - ts*loading (you need to find a loading for deflation by projecting the scores onto X)
                     loading = np.dot(X.T, ts) / np.sqrt(np.dot(ts.T, ts))
                     X = X - np.dot(ts, loading.T)
 
-                    # 9. Deflate Y by calculating: Ynew = Y - ts*eigenvy.T (deflation on Y is optional)
-                    # Y = Y - np.dot(ts, v.T)
+                    # 9. Calculate explained variance in Y
+                    vary_explained = (np.dot(ts, v.T)**2).sum()
+                    vary = (Y**2).sum()
+                    self.explained_var_y.append(vary_explained / vary)
 
                     # 10. Upweight Block Importances of blocks with less features
                     sum_vars = []
                     for vector in w:
                         sum_vars.append(len(vector))
-                    
                     a_corrected = []
                     for bip, sum_var in zip(a, sum_vars):
                         factor = 1 - sum_var / np.sum(sum_vars)
                         a_corrected.append(bip * factor)
-                    
                     a_corrected = list(a_corrected / np.sum(a_corrected))
 
                     # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
@@ -180,7 +156,6 @@ class MBPLS(BaseEstimator, FitTransform):
                     for block in range(self.num_blocks):
                         self.W[block] = np.hstack((self.W[block], w[block]))
                         self.T[block] = np.hstack((self.T[block], t[block]))
-
                     pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P.T, weights)))
                     pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts.T, self.Ts)))
                     pseudoinv = np.dot(pseudoinv, self.Ts.T)
@@ -198,11 +173,11 @@ class MBPLS(BaseEstimator, FitTransform):
                     ts = np.linalg.svd(S, full_matrices=self.full_svd)[0][:, 0:1]
 
                     # 3. Calculate v (Y-loading) by projection of ts on Y
-                    v = np.dot(Y.T, ts)
-                    v = v / np.linalg.norm(v)
-
+                    v = np.dot(Y.T, ts) / np.dot(ts.T, ts)
+                    
                     # 4. Calculate u (Y-scores)
                     u = np.dot(Y, v)
+                    u = u / np.linalg.norm(u)
 
                     # 5. Calculate weights eigenv
                     eigenv = np.dot(X.T, u)
@@ -225,22 +200,21 @@ class MBPLS(BaseEstimator, FitTransform):
                     loading = np.dot(X.T, ts) / np.sqrt(np.dot(ts.T, ts))
                     X = X - np.dot(ts, loading.T)
 
-                    # 9. Deflate Y by calculating: Ynew = Y - ts*eigenvy.T (deflation on Y is optional)
-                    # Y = Y - np.dot(ts, v.T)
-
-                    # 10. Upweight Block Importances of blocks with less features
+                    # 9. Calculate explained variance in Y
+                    vary_explained = (np.dot(ts, v.T)**2).sum()
+                    vary = (Y**2).sum()
+                    self.explained_var_y.append(vary_explained / vary)
+                    
+                    # 10. Upweight Block Importances of blocks with less features (provided as additional figure of merit)
                     sum_vars = []
                     for vector in w:
                         sum_vars.append(len(vector))
-                    
                     a_corrected = []
                     for bip, sum_var in zip(a, sum_vars):
                         factor = 1 - sum_var / np.sum(sum_vars)
                         a_corrected.append(bip * factor)
-                    
                     a_corrected = list(a_corrected / np.sum(a_corrected))
-                
-                    
+                                    
                     # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
                     self.V = np.hstack((self.V, v))
                     self.U = np.hstack((self.U, u))
@@ -249,11 +223,9 @@ class MBPLS(BaseEstimator, FitTransform):
                     self.Ts = np.hstack((self.Ts, ts))
                     self.P = np.hstack((self.P, loading))
                     weights = np.hstack((weights, eigenv))
-
                     for block in range(self.num_blocks):
                         self.W[block] = np.hstack((self.W[block], w[block]))
                         self.T[block] = np.hstack((self.T[block], t[block]))
-
                     pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P.T, weights)))
                     pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts.T, self.Ts)))
                     pseudoinv = np.dot(pseudoinv, self.Ts.T)
