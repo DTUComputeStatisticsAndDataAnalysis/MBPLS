@@ -74,6 +74,7 @@ class MBPLS(BaseEstimator, FitTransform):
         self.U = np.empty((Y.shape[0], 0))
         self.Ts = np.empty((Y.shape[0], 0))
         self.explained_var_y = []
+        self.explained_var_x = []
 
         for block in range(self.num_blocks):
             self.W.append(np.empty((X[block].shape[1], 0)))
@@ -107,7 +108,7 @@ class MBPLS(BaseEstimator, FitTransform):
                     for indices, block in zip(feature_indices, range(self.num_blocks)):
                         partialloading = eigenv[indices[0]:indices[1]]
                         w.append(partialloading / np.linalg.norm(partialloading))
-                        a.append(np.linalg.norm(partialloading)**2)                     # changed here!
+                        a.append(np.linalg.norm(partialloading)**2)
 
                     # 4. Calculate block scores t1, t2, ... as tn = Xn*wn
                     t = []
@@ -126,10 +127,13 @@ class MBPLS(BaseEstimator, FitTransform):
                     u = np.dot(Y, v)
                     u = u / np.linalg.norm(u)
 
-                    # 8. Deflate X by calculating: Xnew = X - ts*loading (you need to find a loading for deflation by projecting the scores onto X)
+                    # 8. Deflate X and calculate explained variance in Xtotol; X1, X2, ... Xk
                     loading = np.dot(X.T, ts) / np.sqrt(np.dot(ts.T, ts))
+                    varx_explained = (np.dot(ts, loading.T)**2).sum()
+                    if comp==0: varx = (X**2).sum()
+                    self.explained_var_x.append(varx_explained / varx)
                     X = X - np.dot(ts, loading.T)
-
+                    
                     # 9. Calculate explained variance in Y
                     vary_explained = (np.dot(ts, v.T)**2).sum()
                     vary = (Y**2).sum()
@@ -189,15 +193,18 @@ class MBPLS(BaseEstimator, FitTransform):
                     for indices, block in zip(feature_indices, range(self.num_blocks)):
                         partialloading = eigenv[indices[0]:indices[1]]
                         w.append(partialloading / np.linalg.norm(partialloading))
-                        a.append(np.linalg.norm(partialloading)**2)                 # changed here!
+                        a.append(np.linalg.norm(partialloading)**2)
 
                     # 7. Calculate block scores t1, t2, ... as tn = Xn*wn
                     t = []
                     for block, blockloading in zip(Xblocks, w):
                         t.append(np.dot(block, blockloading))
 
-                    # 8. Deflate X by calculating: Xnew = X - ts*loading (you need to find a loading for deflation by projecting the scores onto X)
+                    # 8. Deflate X and calculate explained variance in Xtotol; X1, X2, ... Xk
                     loading = np.dot(X.T, ts) / np.sqrt(np.dot(ts.T, ts))
+                    varx_explained = (np.dot(ts, loading.T)**2).sum()
+                    if comp==0: varx = (X**2).sum()
+                    self.explained_var_x.append(varx_explained / varx)
                     X = X - np.dot(ts, loading.T)
 
                     # 9. Calculate explained variance in Y
@@ -353,10 +360,10 @@ class MBPLS(BaseEstimator, FitTransform):
         plt.suptitle("Component {:d} plots".format(component), fontsize=14, fontweight='bold')
         plt.subplot(221)
         plt.plot(self.W[0][:, component-1])
-        plt.title('block loading x1\nBlock importance: ' + str(round(self.A[0, component-1] ** 2, 2)))
+        plt.title('block loading x1\nBlock importance: ' + str(round(self.A[0, component-1], 2)))
         plt.subplot(222)
         plt.plot(self.W[1][:, component-1])
-        plt.title('block loading x2\nBlock importance: ' + str(round(self.A[1, component-1] ** 2, 2)))
+        plt.title('block loading x2\nBlock importance: ' + str(round(self.A[1, component-1], 2)))
         plt.subplot(223)
         plt.plot(self.T[0][:, component-1])
         plt.title('block scores x1')
@@ -369,7 +376,7 @@ class MBPLS(BaseEstimator, FitTransform):
         plt.figure()
         plt.suptitle("Block importances for component {}".format(component), fontsize=14, fontweight='bold')
         plt.subplot(111)
-        plt.bar(np.arange(self.num_blocks)+1, 100*np.ravel(np.power(self.A[:, component - 1], 2)))
+        plt.bar(np.arange(self.num_blocks)+1, 100*np.ravel(self.A[:, component - 1]))
         plt.xticks(list(np.arange(self.num_blocks)+1))
         plt.ticklabel_format(style='plain',axis='x',useOffset=False)
         plt.xlabel("Block")

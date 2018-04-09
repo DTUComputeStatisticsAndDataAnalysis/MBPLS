@@ -44,7 +44,7 @@ def make_orth_scores(num_samples, rand_seed):
     from scipy.stats import ortho_group
     var = ortho_group.rvs(num_samples, random_state=rand_seed)
     return var[:,:3]
-:TODO
+
 def calc_bips(loadings, num_vars_x1, num_vars_x2):
     bips = []
     for loading in loadings.T:
@@ -100,7 +100,7 @@ plt.ylabel('arbitrary intensity')
 plt.title('Data as constructed by X = TP.T')
 
 # Fit MBPLS model
-which_y = 3
+which_y = 1
 pls_own = MBPLS(n_components=1)
 pls_own.fit([x1, x2], y[:,which_y-1:which_y])
 
