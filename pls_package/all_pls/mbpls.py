@@ -70,6 +70,7 @@ class MBPLS(BaseEstimator, FitTransform):
         self.T = []
         self.A = np.empty((self.num_blocks, 0))
         self.A_corrected = np.empty((self.num_blocks, 0))
+        self.explained_var_xblocks = np.empty((self.num_blocks, 0))
         self.V = np.empty((Y.shape[1], 0))
         self.U = np.empty((Y.shape[0], 0))
         self.Ts = np.empty((Y.shape[0], 0))
@@ -132,6 +133,15 @@ class MBPLS(BaseEstimator, FitTransform):
                     varx_explained = (np.dot(ts, loading.T)**2).sum()
                     if comp==0: varx = (X**2).sum()
                     self.explained_var_x.append(varx_explained / varx)
+                    
+                    varx_blocks_explained = []
+                    if comp==0: varxblocks = []
+                    for indices, block in zip(feature_indices, range(self.num_blocks)):
+                        if comp==0: 
+                            varxblocks.append((X[:,indices[0]:indices[1]]**2).sum())
+                        varx_explained = (np.dot(ts, loading[indices[0]:indices[1]].T)**2).sum()
+                        varx_blocks_explained.append(varx_explained / varxblocks[block])
+                    
                     X = X - np.dot(ts, loading.T)
                     
                     # 9. Calculate explained variance in Y
@@ -154,6 +164,7 @@ class MBPLS(BaseEstimator, FitTransform):
                     self.U = np.hstack((self.U, u))
                     self.A = np.hstack((self.A, np.matrix(a).T))
                     self.A_corrected = np.hstack((self.A_corrected, np.matrix(a_corrected).T))
+                    self.explained_var_xblocks = np.hstack((self.explained_var_xblocks, np.matrix(varx_blocks_explained).T))
                     self.Ts = np.hstack((self.Ts, ts))
                     self.P = np.hstack((self.P, loading))
                     weights = np.hstack((weights, eigenv))
@@ -205,6 +216,15 @@ class MBPLS(BaseEstimator, FitTransform):
                     varx_explained = (np.dot(ts, loading.T)**2).sum()
                     if comp==0: varx = (X**2).sum()
                     self.explained_var_x.append(varx_explained / varx)
+                    
+                    varx_blocks_explained = []
+                    if comp==0: varxblocks = []
+                    for indices, block in zip(feature_indices, range(self.num_blocks)):
+                        if comp==0: 
+                            varxblocks.append((X[:,indices[0]:indices[1]]**2).sum())
+                        varx_explained = (np.dot(ts, loading[indices[0]:indices[1]].T)**2).sum()
+                        varx_blocks_explained.append(varx_explained / varxblocks[block])
+                    
                     X = X - np.dot(ts, loading.T)
 
                     # 9. Calculate explained variance in Y
@@ -227,6 +247,7 @@ class MBPLS(BaseEstimator, FitTransform):
                     self.U = np.hstack((self.U, u))
                     self.A = np.hstack((self.A, np.matrix(a).T))
                     self.A_corrected = np.hstack((self.A_corrected, np.matrix(a_corrected).T))
+                    self.explained_var_xblocks = np.hstack((self.explained_var_xblocks, np.matrix(varx_blocks_explained).T))
                     self.Ts = np.hstack((self.Ts, ts))
                     self.P = np.hstack((self.P, loading))
                     weights = np.hstack((weights, eigenv))

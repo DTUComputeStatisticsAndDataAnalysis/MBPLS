@@ -100,7 +100,7 @@ plt.ylabel('arbitrary intensity')
 plt.title('Data as constructed by X = TP.T')
 
 # Fit MBPLS model
-which_y = 1
+which_y = 2
 pls_own = MBPLS(n_components=1)
 pls_own.fit([x1, x2], y[:,which_y-1:which_y])
 
