@@ -129,7 +129,7 @@ class MBPLS(BaseEstimator, FitTransform):
                     u = u / np.linalg.norm(u)
 
                     # 8. Deflate X and calculate explained variance in Xtotol; X1, X2, ... Xk
-                    loading = np.dot(X.T, ts) / np.sqrt(np.dot(ts.T, ts))
+                    loading = np.dot(X.T, ts) / np.dot(ts.T, ts)
                     varx_explained = (np.dot(ts, loading.T)**2).sum()
                     if comp==0: varx = (X**2).sum()
                     self.explained_var_x.append(varx_explained / varx)
@@ -212,7 +212,7 @@ class MBPLS(BaseEstimator, FitTransform):
                         t.append(np.dot(block, blockloading))
 
                     # 8. Deflate X and calculate explained variance in Xtotol; X1, X2, ... Xk
-                    loading = np.dot(X.T, ts) / np.sqrt(np.dot(ts.T, ts))
+                    loading = np.dot(X.T, ts) / np.dot(ts.T, ts)
                     varx_explained = (np.dot(ts, loading.T)**2).sum()
                     if comp==0: varx = (X**2).sum()
                     self.explained_var_x.append(varx_explained / varx)
