@@ -10,17 +10,19 @@
 
 from setuptools import setup, find_packages
 
-import all_pls
+import unipls
 
 NAME = "unipls"
 DESCRIPTION = "A set of several partial least squares algorithms"
-VERSION = all_pls.__version__
+VERSION = unipls.__version__
 AUTHORS = "Andreas Baum, Laurent Vermue"
 AUTHOR_MAILS = "<andba@dtu.dk>, <lauve@dtu.dk>"
 LICENSE = 'new BSD'
 
 # This is the lowest tested version. Below might work as well
 NUMPY_MIN_VERSION = '1.13.3'
+MATPLOTLIB_MIN_VERSION = '2.1.1'
+SCIPY_MIN_VERSION = '1.0.0'
 
 setup(name=NAME,
       version=VERSION,
@@ -43,6 +45,8 @@ setup(name=NAME,
                    'Development Status :: 2 - Pre-Alpha'
                    ],
       install_requires=[
-          'numpy>={0}'.format(NUMPY_MIN_VERSION)
+          'numpy>={0}'.format(NUMPY_MIN_VERSION),
+          'matplotlib>={0}'.format(MATPLOTLIB_MIN_VERSION),
+          'scipy>={0}'.format(SCIPY_MIN_VERSION)
             ]
       )

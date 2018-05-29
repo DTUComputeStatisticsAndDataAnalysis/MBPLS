@@ -14,8 +14,8 @@ Created on Thu Mar 15 09:03:12 2018
 """
 from matplotlib import pyplot as plt
 import numpy as np
-from pls_package.all_pls.mbpls import MBPLS
-from pls_package.all_pls.data.get_filepath import data_path
+from unipls.mbpls import MBPLS
+from unipls.data.get_data import data_path
 
 plt.close('all')
 

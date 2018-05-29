@@ -8,6 +8,8 @@
 #
 # License: 3-clause BSD
 
-from . import get_filepath
+from . import mbpls, data, test_scripts
 
-__all__ = ["get_filepath.py"]
+__all__ = ["mbpls", "data", "test_scripts"]
+
+__version__ = "0.0.1"

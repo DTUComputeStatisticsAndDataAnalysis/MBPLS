@@ -5,13 +5,22 @@
 # author: Laurent Vermue
 # author_email: lauve@dtu.dk
 #
+#
+# License: 3-clause BSD
 
+import os
 import numpy as np
 from scipy.stats import ortho_group
 
+all = ['data_path',
+       'orthogonal_data']
 
-def get_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, params_block_three = 3, \
-             num_of_variables_main_lin_comb = 9, num_of_batches = 1):
+def data_path():
+    path = os.path.dirname(os.path.abspath(__file__))
+    return path
+
+def orthogonal_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, params_block_three = 3, \
+                    num_of_variables_main_lin_comb = 9, num_of_batches = 1):
     """This function creates a dataset with three X-blocks, which are completely orthogonal
     amongst each other and one Y-block, that has two response variables, which are a linear combination of
     the variables defined for the three blocks.
