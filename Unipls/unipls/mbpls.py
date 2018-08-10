@@ -7,31 +7,42 @@ Created on Mon Jan 15 14:31:48 2018
 
 """
 
-from .base import BaseEstimator, FitTransform
-from sklearn.preprocessing import StandardScaler
+from .base import BaseEstimator, AdditionalMethods
 import collections
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 
 __all__ = ['MBPLS']
 
 
-class MBPLS(BaseEstimator, FitTransform):
+class MBPLS(BaseEstimator, AdditionalMethods):
+    #TODO: Write a bit about the models used in this text field
     """Multiblock PLS regression
 
         - super scores are normalized to length 1 (not done in R package ade4)
         - N > P run SVD(X'YY'X) --> PxP matrix
         - N < P run SVD(XX'YY') --> NxN matrix (Lindgreen et al. 1998)
 
+        Model settings
         ----------
 
-        X : list
-            of all xblocks x1, x2, ..., xn. Rows are observations, columns are features/variables
-        Y : array
-            1-dim or 2-dim array of reference values
+        method : string (default 'SVD')
+        The method being used to derive the model attributes, possible are 'SVD', 'NIPALS', 'SIMPLS'
+
         n_components : int
-            Number of Latent Variables.
+        Number of Latent Variables.
 
+        standardize : bool (default True)
+        Standardizing the data
 
+        full_svd : bool (default True)
+        Using full singular value decomposition when performing SVD method
+
+        max_tol : non-negative float (default 1e-14)
+        Maximum tolerance allowed when using the iterative NIPALS algorithm
+
+        Model attributes after fitting
+        ----------
         X side:
         Ts - super scores
         T - list of block scores (number of elements = number of blocks)
@@ -47,22 +58,36 @@ class MBPLS(BaseEstimator, FitTransform):
 
     """
 
-    def __init__(self, n_components, method='SVD', full_svd=True, standardize=False):
+    def __init__(self, n_components, method='SVD', full_svd=True, standardize=True):
         self.n_components = n_components
         self.full_svd = full_svd
         self.method = method
         self.standardize = standardize
+        self.max_tol = 1e-14
+        self.fitted = False
 
     # IDEA: Equal vectorlength for all blocks with enforcement,
     # IDEA: Amount of features corrected block length (Blockimportance corrected) (Andreas)
     # IDEA: Variance related to all Blocks (Andreas)
 
     def fit(self, X, Y):
+        """ Fit model to given data
+
+        Parameters
+        ----------
+
+        X : list
+            of all xblocks x1, x2, ..., xn. Rows are observations, columns are features/variables
+        Y : array
+            1-dim or 2-dim array of reference values
+        """
+
+        global U, T, R
         if self.standardize:
             self.x_scalers = []
             if isinstance(X, list):
                 for block in range(len(X)):
-                    self.x_scalers.append(StandardScaler(with_mean=True, with_std=False))
+                    self.x_scalers.append(StandardScaler(with_mean=True, with_std=True))
                     X[block] = self.x_scalers[block].fit_transform(X[block])
 
             else:
@@ -278,6 +303,8 @@ class MBPLS(BaseEstimator, FitTransform):
                     pseudoinv = np.dot(pseudoinv, self.Ts.T)
                     self.beta = np.dot(pseudoinv, Y)
 
+            self.fitted = True
+
             return self
 
         elif self.method == 'NIPALS':
@@ -294,7 +321,7 @@ class MBPLS(BaseEstimator, FitTransform):
                 u_a = Y_calc[:, 0:1]
                 run = 1
                 diff_t = 1
-                while diff_t > 1e-14:  # Condition on error of ts
+                while diff_t > self.max_tol:  # Condition on error of ts
                     # 1. Regress u_a against all blocks
                     weights = []
                     weights_non_normal = []
@@ -363,17 +390,127 @@ class MBPLS(BaseEstimator, FitTransform):
             weights_total = weights_total / np.linalg.norm(weights_total, axis=0)
             pseudoinv = np.linalg.pinv((np.dot(self.P.T, weights_total)))
             R = np.dot(weights_total, pseudoinv)
+            self.R = R
             self.beta = np.dot(R, self.V.T)
 
+            self.fitted = True
+            return self
+
+        elif self.method == 'SIMPLS':
+            # de Jong 1993
+            S = np.dot(X.T, Y)
+            for comp in range(self.n_components):
+                q = np.linalg.svd(S.T.dot(S), full_matrices=self.full_svd)[0][:, 0:1]
+                r = S.dot(q)
+                t = X.dot(r)
+                t = t - np.mean(t)
+                normt = np.sqrt(t.T.dot(t))
+                t = t / normt
+                r = r / normt
+                p = X.T.dot(t)
+                q = Y.T.dot(t)
+                u = Y.dot(q)
+                v = p
+                if comp>0:
+                    v = v - V.dot(V.T.dot(p))
+                    u = u - T.dot(T.T.dot(u))
+                v = v / np.sqrt(v.T.dot(v))
+                S = S - v.dot(v.T.dot(S))
+                if comp == 0:
+                    R = r
+                    T = t
+                    P = p
+                    Q = q
+                    U = u
+                    V = v
+                else:
+                    R = np.hstack((R,r))
+                    T = np.hstack((T,t))
+                    P = np.hstack((P,p))
+                    Q = np.hstack((Q,q))
+                    U = np.hstack((U,u))
+                    V = np.hstack((V,v))
+
+            self.P = P
+            self.Ts = T
+            self.U = U / np.linalg.norm(U)
+            self.R = R
+            self.beta = R.dot(Q.T)
+
+            self.fitted = True
             return self
         else:
             raise NameError('Method you called is unknown')
 
-    def transform(self, X, Y):
-        return self
+    def transform(self, X, Y=None):
+        """ Obtain scores based on the fitted model
 
-    def predict(self, X, Y):
-        return self
+         Parameters
+        ----------
+        X : list
+            of all xblocks x1, x2, ..., xn. Rows are observations, columns are features/variables
+        (optional) Y : array
+            1-dim or 2-dim array of reference values
+
+        Returns
+        ----------
+        X_scores : list
+        List of np.arrays for several blocks
+
+        Y_scores : np.array (optional)
+        Y-scores, if y was given
+        """
+        assert self.fitted == True, 'The model has not been fitted yet'
+        assert isinstance(X, list), "The different blocks have to be passed in a list"
+
+        if Y is None:
+            X_scores = []
+            if self.standardize:
+                for block in range(len(X)):
+                    X[block] = self.x_scalers[block].transform(X[block])
+
+                X = np.hstack(X)
+                X.dot(self.R)
+
+            else:
+                X = np.hstack(X)
+                X.dot(self.R)
+
+            #TODO: Return scores per Block
+        else:
+            pass
+
+
+
+    def predict(self, X):
+        """Predict y based on the fitted model
+
+        Parameters
+        ----------
+        X : list
+            of all xblocks x1, x2, ..., xn. Rows are observations, columns are features/variables
+
+        Returns
+        ----------
+        y_hat : np.array
+        Predictions made based on trained model and supplied X
+
+        """
+        assert self.fitted == True, 'The model has not been fitted yet'
+
+        if self.standardize:
+            if isinstance(X, list):
+                for block in range(len(X)):
+                    X[block] = self.x_scalers[block].transform(X[block])
+            else:
+                raise AttributeError("The different blocks have to be passed in a list")
+            X = np.hstack(X)
+            y_hat = self.y_scaler.inverse_transform(X.dot(self.beta))
+        else:
+            X = np.hstack(X)
+            y_hat = X.dot(self.beta)
+
+        return y_hat
 
     def plot(self, num_components='Component that should be plotted'):
         """
