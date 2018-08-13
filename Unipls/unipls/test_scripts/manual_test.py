@@ -26,7 +26,7 @@ Model (1 x 2) first entry : 0 = no cross validation (default), 1 = cross validat
 @author: Andreas Baum, andba@dtu.dk
 @edited: Laurent Vermue, lauve@dtu.dk
 """
-
+#%%
 from matplotlib import pyplot as plt
 from unipls.data.get_data import data_path
 from unipls.mbpls import MBPLS
@@ -87,11 +87,69 @@ x2_process, y_process = preprocess(x2, y)
 
 # Here follows the calculation
 
-pls_own_SVD = MBPLS(n_components = 4, method='SVD', standardize=True)
-pls_own_NIPALS = MBPLS(n_components = 4, method='NIPALS', standardize=True)
+pls_own_SVD = MBPLS(n_components = 1, method='SVD', standardize=True)
+pls_own_NIPALS = MBPLS(n_components = 1, method='NIPALS', standardize=True)
+pls_own_SIMPLS = MBPLS(n_components = 1, method='SIMPLS', standardize=True)
 
 pls_own_SVD.fit([x1, x2], y[:, 0:1])
 pls_own_NIPALS.fit([x1, x2], y[:,0:1])
+pls_own_SIMPLS.fit([x1, x2], y[:,0:1])
+
+#%%
+print(np.sum(np.abs(pls_own_SIMPLS.Ts)-np.abs(pls_own_SVD.Ts)))
+X=np.hstack((x1, x2))
+X.dot(pls_own_SVD.beta)
+
+
+
+#%% Testing on data from above
+
+pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=True)
+pls_own_NIPALS.fit([x1, x2], y[:,0:2])
+print(pls_own_NIPALS.A)
+pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=False)
+pls_own_NIPALS.fit([x1, x2], y[:,0:2])
+print(pls_own_NIPALS.A)
+
+#%% Testing vectors that are not completely othogonal
+a=np.random.randint(1,20,size=(20,500))
+y_a=a[:,0:1] * 100
+y_a = y_a.T + np.random.rand(a[:,0:1].shape[0])
+y_a = y_a.T
+a1=a[:,0:2]
+a2=a[:,2:]
+
+
+# Not standardizing the blocks renders the blockimportance useless
+
+pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=True)
+pls_own_NIPALS.fit([a1, a2], y_a)
+print(pls_own_NIPALS.A)
+pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=False)
+pls_own_NIPALS.fit([a1, a2], y_a)
+print(pls_own_NIPALS.A)
+
+#%% Testing completely orthogonal vectors
+from scipy.stats import ortho_group
+A = ortho_group.rvs(100)
+y_a=A[:,0:1] * 10
+y_a = y_a.T + np.random.rand(A[:,0:1].shape[0])
+y_a = y_a.T
+a1=A[:,0:2]
+a2=A[:,2:]
+
+# Not standardizing the blocks renders the blockimportance useless
+
+pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=True)
+pls_own_NIPALS.fit([a1, a2], y_a)
+print(pls_own_NIPALS.A)
+pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=False)
+pls_own_NIPALS.fit([a1, a2], y_a)
+print(pls_own_NIPALS.A)
+
+
+
+#%%
 
 # Specify here which Component loadings and scores to plot below
 pls_own_SVD.plot(4)
