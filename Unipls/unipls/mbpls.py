@@ -58,13 +58,14 @@ class MBPLS(BaseEstimator, AdditionalMethods):
 
     """
 
-    def __init__(self, n_components, method='SVD', full_svd=True, standardize=True):
+    def __init__(self, n_components, method='SVD', full_svd=True, standardize=True, verbose=True):
         self.n_components = n_components
         self.full_svd = full_svd
         self.method = method
         self.standardize = standardize
         self.max_tol = 1e-14
         self.fitted = False
+        self.verbose = verbose
 
     # IDEA: Equal vectorlength for all blocks with enforcement,
     # IDEA: Amount of features corrected block length (Blockimportance corrected) (Andreas)
@@ -128,7 +129,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
         self.P = np.empty((X.shape[1], 0))
         weights = np.empty((X.shape[1], 0))
 
-        if self.method == 'SVD':
+        if self.method == 'UNIPALS':
             num_samples = X.shape[0]
             num_features = X.shape[1]
 
@@ -169,14 +170,16 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     u = np.dot(Y, v)
                     u = u / np.linalg.norm(u)
 
-                    # 8. Deflate X and calculate explained variance in Xtotol; X1, X2, ... Xk
+                    # 8. Deflate X and calculate explained variance in Xtotal; X1, X2, ... Xk
                     p = np.dot(X.T, ts) / np.dot(ts.T, ts)
                     varx_explained = (np.dot(ts, p.T) ** 2).sum()
-                    if comp == 0: varx = (X ** 2).sum()
+                    if comp == 0:
+                        varx = (X ** 2).sum()
                     self.explained_var_x.append(varx_explained / varx)
 
                     varx_blocks_explained = []
-                    if comp == 0: varxblocks = []
+                    if comp == 0:
+                        varxblocks = []
                     for indices, block in zip(feature_indices, range(self.num_blocks)):
                         if comp == 0:
                             varxblocks.append((X[:, indices[0]:indices[1]] ** 2).sum())
@@ -214,6 +217,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                         self.W[block] = np.hstack((self.W[block], w[block]))
                         self.T[block] = np.hstack((self.T[block], t[block]))
                     pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P.T, weights)))
+                    self.R = pseudoinv
                     pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts.T, self.Ts)))
                     pseudoinv = np.dot(pseudoinv, self.Ts.T)
                     self.beta = np.dot(pseudoinv, Y)
@@ -253,15 +257,16 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     for block, blockloading in zip(Xblocks, w):
                         t.append(np.dot(block, blockloading))
 
-                    # 8. Deflate X and calculate explained variance in Xtotol; X1, X2, ... Xk
+                    # 8. Deflate X and calculate explained variance in Xtotal; X1, X2, ... Xk
                     p = np.dot(X.T, ts) / np.dot(ts.T, ts)
                     varx_explained = (np.dot(ts, p.T) ** 2).sum()
-                    # TODO: Clear purpose of this line
-                    if comp == 0: varx = (X ** 2).sum()
+                    if comp == 0:
+                        varx = (X ** 2).sum()
                     self.explained_var_x.append(varx_explained / varx)
 
                     varx_blocks_explained = []
-                    if comp == 0: varxblocks = []
+                    if comp == 0:
+                        varxblocks = []
                     for indices, block in zip(feature_indices, range(self.num_blocks)):
                         if comp == 0:
                             varxblocks.append((X[:, indices[0]:indices[1]] ** 2).sum())
@@ -298,11 +303,170 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     for block in range(self.num_blocks):
                         self.W[block] = np.hstack((self.W[block], w[block]))
                         self.T[block] = np.hstack((self.T[block], t[block]))
-                    # TODO: implement R coefficient
                     pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P.T, weights)))
+                    self.R = pseudoinv
                     pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts.T, self.Ts)))
                     pseudoinv = np.dot(pseudoinv, self.Ts.T)
                     self.beta = np.dot(pseudoinv, Y)
+
+            self.fitted = True
+
+            return self
+
+        elif self.method == 'KERNEL':
+            num_samples = X.shape[0]
+            num_features = X.shape[1]
+
+            if num_samples >= num_features:
+                # Calculate kernel matrix once
+                S = X.T.dot(Y).dot(Y.T).dot(X)
+                # Calculate variance covariance matrixes
+                VAR = X.T.dot(X)
+                COVAR = X.T.dot(Y)
+                for comp in range(self.n_components):
+
+                    eigenv = np.linalg.svd(S, full_matrices=self.full_svd)[0][:, 0:1]
+
+                    # 3. Calculate block loadings w1, w2, ... , superweights a1, a2, ...
+                    w = []
+                    a = []
+                    for indices, block in zip(feature_indices, range(self.num_blocks)):
+                        partialloading = eigenv[indices[0]:indices[1]]
+                        w.append(partialloading / np.linalg.norm(partialloading))
+                        a.append(np.linalg.norm(partialloading) ** 2)
+
+                    # 4. Calculate block scores t1, t2, ... as tn = Xn*wn
+                    #t = []
+                    #for block, blockloading in zip(Xblocks, w):
+                    #    t.append(np.dot(block, blockloading))
+
+                    ## 5. Calculate super scores ts
+                    #ts = np.dot(X, eigenv)
+                    ## IDEA: Concat w
+                    #ts = ts / np.linalg.norm(ts)
+
+                    # 6. Calculate v (Y-loading) by projection of ts on Y
+                    v = eigenv.T.dot(COVAR)/eigenv.T.dot(VAR).dot(eigenv)
+
+                    # 7. Calculate u (Y-scores)
+                    # u = np.dot(Y, v)
+                    # u = u / np.linalg.norm(u)
+
+                    # 8. Deflate X and calculate explained variance in Xtotal; X1, X2, ... Xk
+                    p = eigenv.T.dot(VAR)/eigenv.T.dot(VAR).dot(eigenv)
+
+                    #varx_explained = (np.dot(ts, p.T) ** 2).sum()
+                    #if comp == 0:
+                    #    varx = (X ** 2).sum()
+                    #self.explained_var_x.append(varx_explained / varx)
+
+                    #varx_blocks_explained = []
+                    #if comp == 0:
+                    #    varxblocks = []
+                    #for indices, block in zip(feature_indices, range(self.num_blocks)):
+                    #    if comp == 0:
+                    #        varxblocks.append((X[:, indices[0]:indices[1]] ** 2).sum())
+                    #    varx_explained = (np.dot(ts, p[indices[0]:indices[1]].T) ** 2).sum()
+                    #    varx_blocks_explained.append(varx_explained / varxblocks[block])
+
+                    # Update kernel and variance/covariance matrices
+                    deflate_matrix = np.eye(S.shape[0])-eigenv.dot(p)
+                    S = deflate_matrix.T.dot(S).dot(deflate_matrix)
+                    VAR = deflate_matrix.T.dot(VAR).dot(deflate_matrix)
+                    COVAR = deflate_matrix.T.dot(COVAR)
+
+                    # 9. Calculate explained variance in Y
+                    # vary_explained = (np.dot(ts, v.T) ** 2).sum()
+                    #vary = (Y ** 2).sum()
+                    #self.explained_var_y.append(vary_explained / vary)
+
+                    # 10. Upweight Block Importances of blocks with less features
+                    #sum_vars = []
+                    #for vector in w:
+                    #    sum_vars.append(len(vector))
+                    #a_corrected = []
+                    #for bip, sum_var in zip(a, sum_vars):
+                    #    factor = 1 - sum_var / np.sum(sum_vars)
+                    #    a_corrected.append(bip * factor)
+                    #a_corrected = list(a_corrected / np.sum(a_corrected))
+
+                    # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
+                    self.V = np.hstack((self.V, v))
+                    #self.U = np.hstack((self.U, u))
+                    self.A = np.hstack((self.A, np.matrix(a).T))
+                    #self.A_corrected = np.hstack((self.A_corrected, np.matrix(a_corrected).T))
+                    #self.explained_var_xblocks = np.hstack(
+                    #    (self.explained_var_xblocks, np.matrix(varx_blocks_explained).T))
+                    #self.Ts = np.hstack((self.Ts, ts))
+                    self.P = np.hstack((self.P, p.T))
+                    weights = np.hstack((weights, eigenv))
+                    for block in range(self.num_blocks):
+                        self.W[block] = np.hstack((self.W[block], w[block]))
+                    #    self.T[block] = np.hstack((self.T[block], t[block]))
+                    #pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P.T, weights)))
+                    #self.R = pseudoinv
+                    #pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts.T, self.Ts)))
+                    #pseudoinv = np.dot(pseudoinv, self.Ts.T)
+                    #self.beta = np.dot(pseudoinv, Y)
+
+            if num_features > num_samples:
+                # Calculate association matrices
+                AS_X = X.dot(X.T)
+                AS_Y = Y.dot(Y.T)
+                # Calculate kernel matrix once
+                S = AS_X.dot(AS_Y)
+
+                for comp in range(self.n_components):
+
+                    # Calculate the eigenvector with the largest eigenvalue of the kernel matrix
+                    ts = np.linalg.svd(S, full_matrices=self.full_svd)[0][:, 0:1]
+
+                    # Calculate response-score vector
+                    # IDEA: Leave out y deflation
+                    u = AS_Y.dot(ts)
+                    u = u / np.linalg.norm(u)
+
+                    # Deflate association and kernel matrices
+                    deflate_matrix = np.eye(S.shape[0], S.shape[0])-ts.dot(ts.T)
+                    AS_X = deflate_matrix.dot(AS_X).dot(deflate_matrix)
+                    # IDEA: Leave out y deflation
+                    AS_Y = deflate_matrix.dot(AS_Y).dot(deflate_matrix)
+                    S = AS_X.dot(AS_Y)
+
+                    # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
+                    self.U = np.hstack((self.U, u))
+                    self.Ts = np.hstack((self.Ts, ts))
+
+                self.W_concat = X.T.dot(self.U)
+                # Normalize weights to length one per column
+                self.W_concat = self.W_concat / np.linalg.norm(self.W_concat, axis=0)
+                self.P = (X.T.dot(self.Ts)).dot(np.linalg.pinv(self.Ts.T.dot(self.Ts)))
+                self.V = (Y.T.dot(self.Ts)).dot(np.linalg.pinv(self.Ts.T.dot(self.Ts)))
+
+                self.R = self.W_concat.dot(np.linalg.pinv(self.P.T.dot(self.W_concat)))
+                self.beta = self.R.dot(self.V.T)
+
+                if self.verbose:
+                    # Calculate Block importances
+                    for component in range(self.n_components):
+                        a = []
+                        w = []
+                        t = []
+                        for indices in feature_indices:
+                            partialloading = self.W_concat[indices[0]:indices[1], component:component + 1]
+                            weight = partialloading / np.linalg.norm(partialloading)
+                            w.append(weight)
+                            a.append(np.linalg.norm(partialloading) ** 2)
+                            # Calculate block scores t1, t2, ... as tn = Xn*wn
+                            t.append(X[:, indices[0]:indices[1]].dot(weight))
+
+                        # TODO: Check if this could be done more efficiently
+                        # Deflate X matrix to allow correct score calculation
+                        X = X - self.Ts[:, component:component + 1].dot(self.P[:, component:component+1].T)
+                        self.A = np.hstack((self.A, np.matrix(a).T))
+                        for block in range(self.num_blocks):
+                            self.W[block] = np.hstack((self.W[block], w[block]))
+                            self.T[block] = np.hstack((self.T[block], t[block]))
 
             self.fitted = True
 
@@ -367,7 +531,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     Xblocks[block] = Xblocks[block] - np.dot(superscores, loadings[block].T)
 
                 # 10. Deflate Y - No deflation of Y
-                # Y_calc = Y_calc - np.dot(superscores, response_weights.T)
+                #Y_calc = Y_calc - np.dot(superscores, response_weights.T)
 
                 # 11. Append the resulting vectors
                 self.V = np.hstack((self.V, response_weights))
@@ -387,11 +551,12 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     self.T[block] = np.hstack((self.T[block], scores[block] * -1))
 
             # Negate results to achieve same results as with SVD
-            self.Ts *= -1
-            self.P *= -1
-            self.U *= -1
-            self.V *= -1
-            self.loading_y *= -1
+            # TODO: Check if this makes sense
+            # self.Ts *= -1
+            # self.P *= -1
+            # self.U *= -1
+            # self.V *= -1
+            # self.loading_y *= -1
 
             weights_total = np.concatenate((self.W_non_normal), axis=0)  # Concatenate weights for beta calculation
             weights_total = weights_total / np.linalg.norm(weights_total, axis=0)
@@ -415,6 +580,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
             for comp in range(self.n_components):
                 q = np.linalg.svd(S.T.dot(S), full_matrices=self.full_svd)[0][:, 0:1]
                 r = S.dot(q)
+                w = r.copy()
                 t = X.dot(r)
                 t = t - np.mean(t)
                 normt = np.sqrt(t.T.dot(t))
@@ -430,13 +596,15 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                 v = v / np.sqrt(v.T.dot(v))
                 S = S - v.dot(v.T.dot(S))
                 # Calculation of block importance
-                # TODO: This calculation is not correct
-                score_block = np.empty((X.shape[0], 0))
+                # TODO: Clear if this is the better way of calculating A
+                #superweights = p.dot(np.linalg.pinv(t)).dot(u)
+                #superweights = superweights / np.linalg.norm(superweights)
+                a = []
+
                 for indices in feature_indices:
-                    score_vector = X[:, indices[0]:indices[1]].dot(r[indices[0]:indices[1]])
-                    score_block = np.hstack((score_block, score_vector))
-                superweights = score_block.T.dot(u) / u.T.dot(u)
-                superweights = superweights / np.linalg.norm(superweights)
+                    #a.append(np.linalg.norm(superweights[indices[0]:indices[1]]) ** 2)
+                    # or
+                    a.append(np.linalg.norm((w / np.linalg.norm(w))[indices[0]:indices[1]])**2)
 
 
                 if comp == 0:
@@ -444,28 +612,28 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     T = t
                     P = p
                     Q = q
-                    U = u
+                    U = u / np.linalg.norm(u)
                     V = v
-                    A = superweights ** 2  # squared for total length 1
-                    Ts = score_block
+                    W = w
+                    A = np.matrix(a).T  # squared for total length 1
                 else:
                     R = np.hstack((R, r))
                     T = np.hstack((T, t))
                     P = np.hstack((P, p))
                     Q = np.hstack((Q, q))
-                    U = np.hstack((U, u))
+                    U = np.hstack((U, u / np.linalg.norm(u)))
                     V = np.hstack((V, v))
-                    A = np.hstack((A, superweights ** 2))  # squared for total length 1
+                    W = np.hstack((W, w))
+                    A = np.hstack((A, np.matrix(a).T))  # squared for total length 1
 
             self.P = P
             self.A = A
             self.Ts = T
-            self.U = U / np.linalg.norm(U)
+            self.U = U
             self.R = R
             self.beta = R.dot(Q.T)
-            self.T = Ts
-
-
+            self.V = Q
+            self.W = W
 
             self.fitted = True
             return self
@@ -593,8 +761,11 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                 # TODO: Does this make sense?
                 if self.standardize:
                     W_inv_trans.append(self.x_scalers[block].inverse_transform(self.W[block][:, comp]))
+                    #W_inv_trans.append(self.W[block][:, comp])
                 else:
-                    W_inv_trans.append(self.W[block])
+                    W_inv_trans.append(self.W[block][:, comp])
+                #W_inv_trans.append(self.P[block][:, comp])
+
 
                 if len(loading_axes) == 0:
                     # Loadings
