@@ -87,74 +87,130 @@ x2_process, y_process = preprocess(x2, y)
 
 # Here follows the calculation
 
-pls_own_SVD = MBPLS(n_components = 1, method='SVD', standardize=True)
-pls_own_NIPALS = MBPLS(n_components = 1, method='NIPALS', standardize=True)
-pls_own_SIMPLS = MBPLS(n_components = 1, method='SIMPLS', standardize=True)
+UNI = MBPLS(n_components=5, method='UNIPALS', standardize=True)
+NIPALS = MBPLS(n_components=5, method='NIPALS', standardize=True)
+SIMPLS = MBPLS(n_components=5, method='SIMPLS', standardize=True)
+KERNEL = MBPLS(n_components=5, method='KERNEL', standardize=True)
 
-pls_own_SVD.fit([x1, x2], y[:, 0:1])
-pls_own_NIPALS.fit([x1, x2], y[:,0:1])
-pls_own_SIMPLS.fit([x1, x2], y[:,0:1])
+UNI.fit([x1, x2], y[:, 0:1])
+NIPALS.fit([x1, x2], y[:, 0:1])
+SIMPLS.fit([x1, x2], y[:, 0:1])
+KERNEL.fit([x1, x2], y[:, 0:1])
+#KERNEL.fit([x1.T, x2.T], np.repeat(y[:, 0:1], 5, axis=0))
+# Calculate normalized weights in one shot
+#(x1_new.T.dot(KERNEL.U[:,1:2])/np.linalg.norm(x1_new.T.dot(KERNEL.U[:,1:2])))[:10]
+#x1_new = UNI.x_scalers[0].transform(x1)
+
+##### Testing
+
+
 
 #%%
-print(np.sum(np.abs(pls_own_SIMPLS.Ts)-np.abs(pls_own_SVD.Ts)))
+
+# Other way to calculate block importances
+var=5
+test = SIMPLS.W[:, var-1:var]
+test = test / np.linalg.norm(test)
+np.linalg.norm(test[:50]) ** 2
+
+test = np.concatenate((UNI.W[0][:, 1:2],  UNI.W[1][:, 1:2]))
+np.linalg.norm(test[:50]) ** 2
+
+# Probably correct manner to calculate Block importance
+p=SIMPLS.P[:, 1:2]
+t=SIMPLS.Ts[:,1:2]
+u = SIMPLS.U[:, 1:2]
+w = p.dot(np.linalg.pinv(t)).dot(u)
+w = w / np.linalg.norm(w)
+np.linalg.norm(w[:50])**2
+
+# Proof of block importance being calculated this way (Based on loadings)
+# ts = T * superweight / superweight.T * superweight
+Ts = np.hstack((UNI.T[0][:,1:2], UNI.T[1][:, 1:2]))
+ts = UNI.Ts[:, 1:2]
+w = Ts.T.dot(np.linalg.pinv(ts).T)
+w = w / np.linalg.norm(w)
+w ** 2
+
+#np.cov(SIMPLS.Ts[:, 1:2].T, SIMPLS.U[:, 1:2].T)
+#%%
+print(np.sum(np.abs(SIMPLS.Ts)-np.abs(UNI.Ts)))
 X=np.hstack((x1, x2))
-X.dot(pls_own_SVD.beta)
+X.dot(UNI.beta)
 
 
 
 #%% Testing on data from above
 
-pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=True)
-pls_own_NIPALS.fit([x1, x2], y[:,0:2])
-print(pls_own_NIPALS.A)
-pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=False)
-pls_own_NIPALS.fit([x1, x2], y[:,0:2])
-print(pls_own_NIPALS.A)
+NIPALS = MBPLS(n_components=2, method='NIPALS', standardize=True)
+NIPALS.fit([x1, x2], y[:, 0:2])
+print(NIPALS.A)
+
+NIPALS = MBPLS(n_components=2, method='NIPALS', standardize=False)
+NIPALS.fit([x1, x2], y[:, 0:2])
+print(NIPALS.A)
 
 #%% Testing vectors that are not completely othogonal
-a=np.random.randint(1,20,size=(20,500))
-y_a=a[:,0:1] * 100
-y_a = y_a.T + np.random.rand(a[:,0:1].shape[0])
+a=np.random.randint(1, 20, size=(2000, 500))
+y_a=a[:, 0:1] * 100
+y_a = y_a.T + np.random.rand(a[:, 0:1].shape[0])
 y_a = y_a.T
-a1=a[:,0:2]
-a2=a[:,2:]
-
+a1=a[:, 0:2]
+a2=a[:, 2:]
 
 # Not standardizing the blocks renders the blockimportance useless
 
-pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=True)
-pls_own_NIPALS.fit([a1, a2], y_a)
-print(pls_own_NIPALS.A)
-pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=False)
-pls_own_NIPALS.fit([a1, a2], y_a)
-print(pls_own_NIPALS.A)
+NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=True)
+NIPALS.fit([a1, a2], y_a)
+print(NIPALS.A)
+
+NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=False)
+NIPALS.fit([a1, a2], y_a)
+print(NIPALS.A)
+
+#%% Testing vectors that are not completely othogonal
+a=np.random.randint(1, 20, size=(2000, 500))
+y_a=a[:, 0:1] * 100
+y_a = y_a.T + np.random.rand(a[:, 0:1].shape[0])
+y_a = y_a.T
+a1=a[:, 0:2]
+a2=a[:, 2:]
+
+# Not standardizing the blocks renders the blockimportance useless
+
+UNI = MBPLS(n_components = 2, method='UNIPALS', standardize=True)
+UNI.fit([a1, a2], y_a)
+print(UNI.A)
+
+UNI = MBPLS(n_components = 2, method='UNIPALS', standardize=False)
+UNI.fit([a1, a2], y_a)
+print(UNI.A)
 
 #%% Testing completely orthogonal vectors
 from scipy.stats import ortho_group
 A = ortho_group.rvs(100)
-y_a=A[:,0:1] * 10
-y_a = y_a.T + np.random.rand(A[:,0:1].shape[0])
+y_a=A[:, 0:1] * 1000 + A[:, 1:2] * 100
+y_a = y_a.T + np.random.rand(A[:, 0:1].shape[0])
 y_a = y_a.T
-a1=A[:,0:2]
-a2=A[:,2:]
+a1=A[:, 0:2]
+a2=A[:, 2:]
 
 # Not standardizing the blocks renders the blockimportance useless
 
-pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=True)
-pls_own_NIPALS.fit([a1, a2], y_a)
-print(pls_own_NIPALS.A)
-pls_own_NIPALS = MBPLS(n_components = 2, method='NIPALS', standardize=False)
-pls_own_NIPALS.fit([a1, a2], y_a)
-print(pls_own_NIPALS.A)
-
+NIPALS = MBPLS(n_components = 2, method='SIMPLS', standardize=True)
+NIPALS.fit([a1, a2], y_a)
+print(NIPALS.A)
+NIPALS = MBPLS(n_components = 2, method='SIMPLS', standardize=False)
+NIPALS.fit([a1, a2], y_a)
+print(NIPALS.A)
 
 
 #%%
 
 # Specify here which Component loadings and scores to plot below
-pls_own_SVD.plot(4)
-# pls_own_SVD.plot([1,3,5])
-pls_own_NIPALS.plot(4)
+UNI.plot(4)
+# SVD.plot([1,3,5])
+NIPALS.plot(4)
 
 # Scikit Learn PLS
 from sklearn.cross_decomposition import PLSRegression
@@ -168,5 +224,10 @@ scikitpls = pls.fit(X=np.hstack((x1_process, x2_process)), Y=y_process[:, 0:1])
 #scikitpls = pls.fit(X=np.hstack((x1_process, x2_process)), Y=y_process[:,0:1])
 #scikitscores = scikitpls.x_scores_
 
-#print(pls_own_NIPALS.W[1][10,1])
-#print(pls_own_SVD.W[1][10,1])
+#print(NIPALS.W[1][10,1])
+#print(SVD.W[1][10,1])
+
+#%% Testing
+UNI = MBPLS(n_components=5, method='UNIPALS', standardize=False)
+UNI.fit([x1, x2], y[:, 0:1])
+UNI.plot(4)
