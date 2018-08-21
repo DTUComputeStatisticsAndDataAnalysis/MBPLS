@@ -716,7 +716,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
         from matplotlib import pyplot as plt
         from matplotlib.gridspec import GridSpec
         from matplotlib import ticker
-        plt.close('all')
+        #plt.close('all')
 
         # Check arguments and create lists
         if isinstance(num_components, int):
