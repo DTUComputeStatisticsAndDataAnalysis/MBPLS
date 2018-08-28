@@ -58,14 +58,14 @@ class MBPLS(BaseEstimator, AdditionalMethods):
 
     """
 
-    def __init__(self, n_components, method='SVD', full_svd=True, standardize=True, verbose=True):
+    def __init__(self, n_components, method='SVD', full_svd=True, standardize=True, calc_all=True):
         self.n_components = n_components
         self.full_svd = full_svd
         self.method = method
         self.standardize = standardize
         self.max_tol = 1e-14
         self.fitted = False
-        self.verbose = verbose
+        self.calc_all = calc_all
 
     # IDEA: Equal vectorlength for all blocks with enforcement,
     # IDEA: Amount of features corrected block length (Blockimportance corrected) (Andreas)
@@ -127,6 +127,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
         # Concatenate X blocks
         X = np.hstack(X)
         self.P = np.empty((X.shape[1], 0))
+        self.W_concat = np.empty((X.shape[1], 0))
         weights = np.empty((X.shape[1], 0))
 
         if self.method == 'UNIPALS':
@@ -197,11 +198,14 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     sum_vars = []
                     for vector in w:
                         sum_vars.append(len(vector))
-                    a_corrected = []
-                    for bip, sum_var in zip(a, sum_vars):
-                        factor = 1 - sum_var / np.sum(sum_vars)
-                        a_corrected.append(bip * factor)
-                    a_corrected = list(a_corrected / np.sum(a_corrected))
+                    if len(a)==1:
+                        a_corrected = [1]
+                    else:
+                        a_corrected = []
+                        for bip, sum_var in zip(a, sum_vars):
+                            factor = 1 - sum_var / np.sum(sum_vars)
+                            a_corrected.append(bip * factor)
+                        a_corrected = list(a_corrected / np.sum(a_corrected))
 
                     # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
                     self.V = np.hstack((self.V, v))
@@ -284,11 +288,14 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     sum_vars = []
                     for vector in w:
                         sum_vars.append(len(vector))
-                    a_corrected = []
-                    for bip, sum_var in zip(a, sum_vars):
-                        factor = 1 - sum_var / np.sum(sum_vars)
-                        a_corrected.append(bip * factor)
-                    a_corrected = list(a_corrected / np.sum(a_corrected))
+                    if len(a)==1:
+                        a_corrected = [1]
+                    else:
+                        a_corrected = []
+                        for bip, sum_var in zip(a, sum_vars):
+                            factor = 1 - sum_var / np.sum(sum_vars)
+                            a_corrected.append(bip * factor)
+                        a_corrected = list(a_corrected / np.sum(a_corrected))
 
                     # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
                     self.V = np.hstack((self.V, v))
@@ -335,79 +342,34 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                         w.append(partialloading / np.linalg.norm(partialloading))
                         a.append(np.linalg.norm(partialloading) ** 2)
 
-                    # 4. Calculate block scores t1, t2, ... as tn = Xn*wn
-                    #t = []
-                    #for block, blockloading in zip(Xblocks, w):
-                    #    t.append(np.dot(block, blockloading))
-
-                    ## 5. Calculate super scores ts
-                    #ts = np.dot(X, eigenv)
-                    ## IDEA: Concat w
-                    #ts = ts / np.linalg.norm(ts)
-
                     # 6. Calculate v (Y-loading) by projection of ts on Y
                     v = eigenv.T.dot(COVAR)/eigenv.T.dot(VAR).dot(eigenv)
 
-                    # 7. Calculate u (Y-scores)
-                    # u = np.dot(Y, v)
-                    # u = u / np.linalg.norm(u)
-
                     # 8. Deflate X and calculate explained variance in Xtotal; X1, X2, ... Xk
                     p = eigenv.T.dot(VAR)/eigenv.T.dot(VAR).dot(eigenv)
-
-                    #varx_explained = (np.dot(ts, p.T) ** 2).sum()
-                    #if comp == 0:
-                    #    varx = (X ** 2).sum()
-                    #self.explained_var_x.append(varx_explained / varx)
-
-                    #varx_blocks_explained = []
-                    #if comp == 0:
-                    #    varxblocks = []
-                    #for indices, block in zip(feature_indices, range(self.num_blocks)):
-                    #    if comp == 0:
-                    #        varxblocks.append((X[:, indices[0]:indices[1]] ** 2).sum())
-                    #    varx_explained = (np.dot(ts, p[indices[0]:indices[1]].T) ** 2).sum()
-                    #    varx_blocks_explained.append(varx_explained / varxblocks[block])
 
                     # Update kernel and variance/covariance matrices
                     deflate_matrix = np.eye(S.shape[0])-eigenv.dot(p)
                     S = deflate_matrix.T.dot(S).dot(deflate_matrix)
                     VAR = deflate_matrix.T.dot(VAR).dot(deflate_matrix)
+                    # TODO: Deflation of y variables is not necessary
                     COVAR = deflate_matrix.T.dot(COVAR)
 
-                    # 9. Calculate explained variance in Y
-                    # vary_explained = (np.dot(ts, v.T) ** 2).sum()
-                    #vary = (Y ** 2).sum()
-                    #self.explained_var_y.append(vary_explained / vary)
-
-                    # 10. Upweight Block Importances of blocks with less features
-                    #sum_vars = []
-                    #for vector in w:
-                    #    sum_vars.append(len(vector))
-                    #a_corrected = []
-                    #for bip, sum_var in zip(a, sum_vars):
-                    #    factor = 1 - sum_var / np.sum(sum_vars)
-                    #    a_corrected.append(bip * factor)
-                    #a_corrected = list(a_corrected / np.sum(a_corrected))
-
                     # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
-                    self.V = np.hstack((self.V, v))
-                    #self.U = np.hstack((self.U, u))
+                    self.V = np.hstack((self.V, v.T))
                     self.A = np.hstack((self.A, np.matrix(a).T))
-                    #self.A_corrected = np.hstack((self.A_corrected, np.matrix(a_corrected).T))
-                    #self.explained_var_xblocks = np.hstack(
-                    #    (self.explained_var_xblocks, np.matrix(varx_blocks_explained).T))
-                    #self.Ts = np.hstack((self.Ts, ts))
                     self.P = np.hstack((self.P, p.T))
-                    weights = np.hstack((weights, eigenv))
+                    self.W_concat = np.hstack((self.W_concat, eigenv))
                     for block in range(self.num_blocks):
                         self.W[block] = np.hstack((self.W[block], w[block]))
-                    #    self.T[block] = np.hstack((self.T[block], t[block]))
-                    #pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P.T, weights)))
-                    #self.R = pseudoinv
-                    #pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts.T, self.Ts)))
-                    #pseudoinv = np.dot(pseudoinv, self.Ts.T)
-                    #self.beta = np.dot(pseudoinv, Y)
+
+                # TODO: The authors actually implemented a more efficient algorithm without inversion
+                self.R = self.W_concat.dot(np.linalg.pinv(self.P.T.dot(self.W_concat)))
+                self.beta = self.R.dot(self.V.T)
+
+                self.fitted = True
+
+                return self
 
             if num_features > num_samples:
                 # Calculate association matrices
@@ -446,7 +408,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                 self.R = self.W_concat.dot(np.linalg.pinv(self.P.T.dot(self.W_concat)))
                 self.beta = self.R.dot(self.V.T)
 
-                if self.verbose:
+                if self.calc_all:
                     # Calculate Block importances
                     for component in range(self.n_components):
                         a = []
@@ -661,6 +623,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
         assert self.fitted == True, 'The model has not been fitted yet'
         assert isinstance(X, list), "The different blocks have to be passed in a list"
         # IDEA: Return scores per Block
+        # TODO: Return u scores on response variables
 
         if self.standardize:
             for block in range(len(X)):

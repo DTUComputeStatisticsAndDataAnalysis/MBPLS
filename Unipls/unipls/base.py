@@ -43,6 +43,7 @@ class AdditionalMethods(object):
     def fit_predict(self, X, Y, **fit_params):
         """Fit to data, then predict it.
         """
+        # TODO: Standardisierte Ergebnisse ausgeben
         # fit the model to x and y and return their scores
         return self.fit(X, Y, **fit_params).predict(X)
 
