@@ -63,6 +63,7 @@ x1, x2, y = loaddata()
 x1_process, y_process = preprocess(x1, y)
 x2_process, y_process = preprocess(x2, y)
 
+
 ## Plot preprocessed datablocks X1 and X2 colored according to y1, y2, y3
 #plt.subplot(231)
 #plotdata(x1, y[:, 0:1])
@@ -92,10 +93,11 @@ NIPALS = MBPLS(n_components=5, method='NIPALS', standardize=True)
 SIMPLS = MBPLS(n_components=5, method='SIMPLS', standardize=True)
 KERNEL = MBPLS(n_components=5, method='KERNEL', standardize=True)
 
-UNI.fit([x1, x2], y[:, 0:1])
-NIPALS.fit([x1, x2], y[:, 0:1])
-SIMPLS.fit([x1, x2], y[:, 0:1])
-KERNEL.fit([x1, x2], y[:, 0:1])
+UNI.fit([x1, x2], y[:, 0:3])
+NIPALS.fit([x1, x2], y[:, 0:3])
+SIMPLS.fit([x1, x2], y[:, 0:3])
+KERNEL.fit([x1, x2], y[:, 0:3])
+
 #KERNEL.fit([x1.T, x2.T], np.repeat(y[:, 0:1], 5, axis=0))
 # Calculate normalized weights in one shot
 #(x1_new.T.dot(KERNEL.U[:,1:2])/np.linalg.norm(x1_new.T.dot(KERNEL.U[:,1:2])))[:10]

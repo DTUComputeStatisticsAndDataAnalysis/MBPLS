@@ -34,41 +34,41 @@ x2 = np.random.normal(x2, 0.05*noise)
 #%% Fit MBPLS model and assert that result matches reference result
 # Atm SIMPLS yields most different results; Scores and Loadings differ slightly between methods also
 from unipls.mbpls import MBPLS
-methods = ['UNIPALS','NIPALS','KERNEL','SIMPLS']
+methods = ['UNIPALS', 'NIPALS', 'KERNEL', 'SIMPLS']
 for method in methods:
     mbpls_model = MBPLS(n_components=2,method=method,standardize=False)
     mbpls_model.fit([x1, x2], y)
     
     # Load reference results and assert that MBPLS performs as intended
-    T = np.concatenate(mbpls_model.T, axis=1)
+    T = np.concatenate(mbpls_model.T_, axis=1)
     T_ref = np.genfromtxt('./test_data/T.csv',delimiter=',')
     #assert(np.allclose(abs(T), abs(T_ref), atol=1e-4))
     
-    P1 = mbpls_model.P[:num_vars_x1,:]
+    P1 = mbpls_model.P_[:num_vars_x1,:]
     P1_ref = np.genfromtxt('./test_data/P1.csv',delimiter=',')
     #assert(np.allclose(abs(P1), abs(P1_ref), atol=1e-4))
     
-    P2 = mbpls_model.P[num_vars_x1:,:]
+    P2 = mbpls_model.P_[num_vars_x1:,:]
     P2_ref = np.genfromtxt('./test_data/P2.csv',delimiter=',')
     #assert(np.allclose(abs(P2), abs(P2_ref), atol=1e-4))
     
-    Ts = mbpls_model.Ts
+    Ts = mbpls_model.Ts_
     Ts_ref = np.genfromtxt('./test_data/Ts.csv',delimiter=',')
     #assert(np.allclose(abs(Ts), abs(Ts_ref), atol=1e-4))
     
-    A = mbpls_model.A
+    A = mbpls_model.A_
     A_ref = np.genfromtxt('./test_data/A.csv',delimiter=',')
     assert(np.allclose(A, A_ref, atol=1e-4))
     
-    U = mbpls_model.U
+    U = mbpls_model.U_
     U_ref = np.genfromtxt('./test_data/U.csv',delimiter=',')
     #assert(np.allclose(abs(U), abs(U_ref), atol=1e-4))
     
-    V = mbpls_model.V
+    V = mbpls_model.V_
     V_ref = np.genfromtxt('./test_data/V.csv',delimiter=',')
     #assert(np.allclose(abs(V), abs(V_ref), atol=1e-4))
     
-    beta = mbpls_model.beta
+    beta = mbpls_model.beta_
     beta_ref = np.genfromtxt('./test_data/beta.csv',delimiter=',')
     assert(np.allclose(beta, beta_ref, atol=1e-3))
 

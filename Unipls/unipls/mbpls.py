@@ -7,15 +7,24 @@ Created on Mon Jan 15 14:31:48 2018
 
 """
 
-from .base import BaseEstimator, AdditionalMethods
+from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin
+from sklearn.utils.validation import check_X_y, check_array, check_is_fitted, check_consistent_length
+# Add this class to estimator checks
+from sklearn.utils import estimator_checks
+estimator_checks.CROSS_DECOMPOSITION.append('MBPLS')
+from sklearn import metrics
 import collections
 import numpy as np
+from six import with_metaclass
 from sklearn.preprocessing import StandardScaler
+from abc import ABCMeta, abstractmethod
+from sklearn.exceptions import DataConversionWarning
 
 __all__ = ['MBPLS']
 
 
-class MBPLS(BaseEstimator, AdditionalMethods):
+#class PLSRegression(BaseEstimator, TransformerMixin, RegressorMixin):
+class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
     # TODO: Write a bit about the models used in this text field
     """Multiblock PLS regression
 
@@ -44,27 +53,26 @@ class MBPLS(BaseEstimator, AdditionalMethods):
         Model attributes after fitting
         ----------
         X side:
-        Ts - super scores
-        T - list of block scores (number of elements = number of blocks)
-        W - list of block loadings (number of elements = number of blocks)
-        A - super weights/loadings (number of rows = number of blocks)
+        Ts_ - super scores
+        T_ - list of block scores (number of elements = number of blocks)
+        W_ - list of block loadings (number of elements = number of blocks)
+        A_ - super weights/loadings (number of rows = number of blocks)
         eigenv - normal PLS weights (of length 1)
         weights - concatenated eigenv's
-        P - Loadings
+        P_ - Loadings
 
         Y side:
-        U - scores on Y
-        V - loadings on Y
+        U_ - scores on Y
+        V_ - loadings on Y y_loading_
 
     """
 
-    def __init__(self, n_components, method='SVD', full_svd=True, standardize=True, calc_all=True):
+    def __init__(self, n_components=2, full_svd=True, method='NIPALS', standardize=True, max_tol=1e-14, calc_all=True):
         self.n_components = n_components
         self.full_svd = full_svd
         self.method = method
         self.standardize = standardize
-        self.max_tol = 1e-14
-        self.fitted = False
+        self.max_tol = max_tol
         self.calc_all = calc_all
 
     # IDEA: Equal vectorlength for all blocks with enforcement,
@@ -83,20 +91,30 @@ class MBPLS(BaseEstimator, AdditionalMethods):
             1-dim or 2-dim array of reference values
         """
 
-        global U, T, R
+        global U_, T_, R_
+        Y = check_array(Y, dtype=np.float64, ensure_2d=False)
+        if Y.ndim == 1:
+            Y = Y.reshape(-1, 1)
         if self.standardize:
-            self.x_scalers = []
-            if isinstance(X, list):
+            self.x_scalers_ = []
+            if isinstance(X, list) and not isinstance(X[0], list):
                 for block in range(len(X)):
-                    self.x_scalers.append(StandardScaler(with_mean=True, with_std=True))
-                    X[block] = self.x_scalers[block].fit_transform(X[block])
+                    self.x_scalers_.append(StandardScaler(with_mean=True, with_std=True))
+                    # Check dimensions
+                    check_consistent_length(X[block], Y)
+                    X[block] = check_array(X[block], dtype=np.float64, copy=True)
+                    X[block] = self.x_scalers_[block].fit_transform(X[block])
             else:
-                raise AttributeError("The different blocks have to be passed in a list")
+                self.x_scalers_.append(StandardScaler(with_mean=True, with_std=True))
+                # Check dimensions
+                X = check_array(X, dtype=np.float64, copy=True)
+                check_consistent_length(X, Y)
+                X = [self.x_scalers_[0].fit_transform(X)]
 
-            self.y_scaler = StandardScaler(with_mean=True, with_std=True)
-            Y = self.y_scaler.fit_transform(Y)
+            self.y_scaler_ = StandardScaler(with_mean=True, with_std=True)
+            Y = self.y_scaler_.fit_transform(Y)
 
-        self.num_blocks = len(X)
+        self.num_blocks_ = len(X)
 
         # Store start/end feature indices for all x blocks
         feature_indices = []
@@ -106,28 +124,29 @@ class MBPLS(BaseEstimator, AdditionalMethods):
             else:
                 feature_indices.append(np.array([0, block.shape[1]]))
 
-        self.W = []
-        self.W_non_normal = []
-        self.T = []
-        self.A = np.empty((self.num_blocks, 0))
-        self.A_corrected = np.empty((self.num_blocks, 0))
-        self.explained_var_xblocks = np.empty((self.num_blocks, 0))
-        self.V = np.empty((Y.shape[1], 0))
-        self.loading_y = np.empty((Y.shape[1], 0))
-        self.U = np.empty((Y.shape[0], 0))
-        self.Ts = np.empty((Y.shape[0], 0))
-        self.explained_var_y = []
-        self.explained_var_x = []
+        self.W_ = []
+        self.W_non_normal_ = []
+        self.T_ = []
+        self.A_ = np.empty((self.num_blocks_, 0))
+        # TODO: A correct
+        self.A_corrected_ = np.empty((self.num_blocks_, 0))
+        self.explained_var_xblocks_ = np.empty((self.num_blocks_, 0))
+        self.V_ = np.empty((Y.shape[1], 0))
+        self.loading_y_ = np.empty((Y.shape[1], 0))
+        self.U_ = np.empty((Y.shape[0], 0))
+        self.Ts_ = np.empty((Y.shape[0], 0))
+        self.explained_var_y_ = []
+        self.explained_var_x_ = []
 
-        for block in range(self.num_blocks):
-            self.W.append(np.empty((X[block].shape[1], 0)))
-            self.W_non_normal.append(np.empty((X[block].shape[1], 0)))
-            self.T.append(np.empty((X[block].shape[0], 0)))
+        for block in range(self.num_blocks_):
+            self.W_.append(np.empty((X[block].shape[1], 0)))
+            self.W_non_normal_.append(np.empty((X[block].shape[1], 0)))
+            self.T_.append(np.empty((X[block].shape[0], 0)))
 
         # Concatenate X blocks
         X = np.hstack(X)
-        self.P = np.empty((X.shape[1], 0))
-        self.W_concat = np.empty((X.shape[1], 0))
+        self.P_ = np.empty((X.shape[1], 0))
+        self.W_concat_ = np.empty((X.shape[1], 0))
         weights = np.empty((X.shape[1], 0))
 
         if self.method == 'UNIPALS':
@@ -142,14 +161,14 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                         Xblocks.append(X[:, indices[0]:indices[1]])
 
                     # 2. Calculate eigenv (normal pls weights) by SVD(X'YY'X) --> eigenvector with largest eigenvalue
-                    S = np.dot(np.dot(np.dot(X.T, Y), Y.T), X)
+                    S = X.T.dot(Y).dot(Y.T).dot(X)
                     # IDEA: Norming of vectors
                     eigenv = np.linalg.svd(S, full_matrices=self.full_svd)[0][:, 0:1]
 
                     # 3. Calculate block loadings w1, w2, ... , superweights a1, a2, ...
                     w = []
                     a = []
-                    for indices, block in zip(feature_indices, range(self.num_blocks)):
+                    for indices, block in zip(feature_indices, range(self.num_blocks_)):
                         partialloading = eigenv[indices[0]:indices[1]]
                         w.append(partialloading / np.linalg.norm(partialloading))
                         a.append(np.linalg.norm(partialloading) ** 2)
@@ -176,12 +195,12 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     varx_explained = (np.dot(ts, p.T) ** 2).sum()
                     if comp == 0:
                         varx = (X ** 2).sum()
-                    self.explained_var_x.append(varx_explained / varx)
+                    self.explained_var_x_.append(varx_explained / varx)
 
                     varx_blocks_explained = []
                     if comp == 0:
                         varxblocks = []
-                    for indices, block in zip(feature_indices, range(self.num_blocks)):
+                    for indices, block in zip(feature_indices, range(self.num_blocks_)):
                         if comp == 0:
                             varxblocks.append((X[:, indices[0]:indices[1]] ** 2).sum())
                         varx_explained = (np.dot(ts, p[indices[0]:indices[1]].T) ** 2).sum()
@@ -192,7 +211,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     # 9. Calculate explained variance in Y
                     vary_explained = (np.dot(ts, v.T) ** 2).sum()
                     vary = (Y ** 2).sum()
-                    self.explained_var_y.append(vary_explained / vary)
+                    self.explained_var_y_.append(vary_explained / vary)
 
                     # 10. Upweight Block Importances of blocks with less features
                     sum_vars = []
@@ -207,24 +226,24 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                             a_corrected.append(bip * factor)
                         a_corrected = list(a_corrected / np.sum(a_corrected))
 
-                    # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
-                    self.V = np.hstack((self.V, v))
-                    self.U = np.hstack((self.U, u))
-                    self.A = np.hstack((self.A, np.matrix(a).T))
-                    self.A_corrected = np.hstack((self.A_corrected, np.matrix(a_corrected).T))
-                    self.explained_var_xblocks = np.hstack(
-                        (self.explained_var_xblocks, np.matrix(varx_blocks_explained).T))
-                    self.Ts = np.hstack((self.Ts, ts))
-                    self.P = np.hstack((self.P, p))
+                    # 11. add t, w, u, v, ts, eigenv, loading and a to T_, W_, U_, V_, Ts_, weights, P_ and A_
+                    self.V_ = np.hstack((self.V_, v))
+                    self.U_ = np.hstack((self.U_, u))
+                    self.A_ = np.hstack((self.A_, np.matrix(a).T))
+                    self.A_corrected_ = np.hstack((self.A_corrected_, np.matrix(a_corrected).T))
+                    self.explained_var_xblocks_ = np.hstack(
+                        (self.explained_var_xblocks_, np.matrix(varx_blocks_explained).T))
+                    self.Ts_ = np.hstack((self.Ts_, ts))
+                    self.P_ = np.hstack((self.P_, p))
                     weights = np.hstack((weights, eigenv))
-                    for block in range(self.num_blocks):
-                        self.W[block] = np.hstack((self.W[block], w[block]))
-                        self.T[block] = np.hstack((self.T[block], t[block]))
-                    pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P.T, weights)))
-                    self.R = pseudoinv
-                    pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts.T, self.Ts)))
-                    pseudoinv = np.dot(pseudoinv, self.Ts.T)
-                    self.beta = np.dot(pseudoinv, Y)
+                    for block in range(self.num_blocks_):
+                        self.W_[block] = np.hstack((self.W_[block], w[block]))
+                        self.T_[block] = np.hstack((self.T_[block], t[block]))
+                    pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P_.T, weights)))
+                    self.R_ = pseudoinv
+                    pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts_.T, self.Ts_)))
+                    pseudoinv = np.dot(pseudoinv, self.Ts_.T)
+                    self.beta_ = np.dot(pseudoinv, Y)
 
             if num_features > num_samples:
                 for comp in range(self.n_components):
@@ -251,7 +270,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     # 6. Calculate block loadings w1, w2, ... , superweights a1, a2, ...
                     w = []
                     a = []
-                    for indices, block in zip(feature_indices, range(self.num_blocks)):
+                    for indices, block in zip(feature_indices, range(self.num_blocks_)):
                         partialloading = eigenv[indices[0]:indices[1]]
                         w.append(partialloading / np.linalg.norm(partialloading))
                         a.append(np.linalg.norm(partialloading) ** 2)
@@ -266,12 +285,12 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     varx_explained = (np.dot(ts, p.T) ** 2).sum()
                     if comp == 0:
                         varx = (X ** 2).sum()
-                    self.explained_var_x.append(varx_explained / varx)
+                    self.explained_var_x_.append(varx_explained / varx)
 
                     varx_blocks_explained = []
                     if comp == 0:
                         varxblocks = []
-                    for indices, block in zip(feature_indices, range(self.num_blocks)):
+                    for indices, block in zip(feature_indices, range(self.num_blocks_)):
                         if comp == 0:
                             varxblocks.append((X[:, indices[0]:indices[1]] ** 2).sum())
                         varx_explained = (np.dot(ts, p[indices[0]:indices[1]].T) ** 2).sum()
@@ -282,7 +301,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     # 9. Calculate explained variance in Y
                     vary_explained = (np.dot(ts, v.T) ** 2).sum()
                     vary = (Y ** 2).sum()
-                    self.explained_var_y.append(vary_explained / vary)
+                    self.explained_var_y_.append(vary_explained / vary)
 
                     # 10. Upweight Block Importances of blocks with less features (provided as additional figure of merit)
                     sum_vars = []
@@ -297,26 +316,24 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                             a_corrected.append(bip * factor)
                         a_corrected = list(a_corrected / np.sum(a_corrected))
 
-                    # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
-                    self.V = np.hstack((self.V, v))
-                    self.U = np.hstack((self.U, u))
-                    self.A = np.hstack((self.A, np.matrix(a).T))
-                    self.A_corrected = np.hstack((self.A_corrected, np.matrix(a_corrected).T))
-                    self.explained_var_xblocks = np.hstack(
-                        (self.explained_var_xblocks, np.matrix(varx_blocks_explained).T))
-                    self.Ts = np.hstack((self.Ts, ts))
-                    self.P = np.hstack((self.P, p))
+                    # 11. add t, w, u, v, ts, eigenv, loading and a to T_, W_, U_, V_, Ts_, weights, P_ and A_
+                    self.V_ = np.hstack((self.V_, v))
+                    self.U_ = np.hstack((self.U_, u))
+                    self.A_ = np.hstack((self.A_, np.matrix(a).T))
+                    self.A_corrected_ = np.hstack((self.A_corrected_, np.matrix(a_corrected).T))
+                    self.explained_var_xblocks_ = np.hstack(
+                        (self.explained_var_xblocks_, np.matrix(varx_blocks_explained).T))
+                    self.Ts_ = np.hstack((self.Ts_, ts))
+                    self.P_ = np.hstack((self.P_, p))
                     weights = np.hstack((weights, eigenv))
-                    for block in range(self.num_blocks):
-                        self.W[block] = np.hstack((self.W[block], w[block]))
-                        self.T[block] = np.hstack((self.T[block], t[block]))
-                    pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P.T, weights)))
-                    self.R = pseudoinv
-                    pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts.T, self.Ts)))
-                    pseudoinv = np.dot(pseudoinv, self.Ts.T)
-                    self.beta = np.dot(pseudoinv, Y)
-
-            self.fitted = True
+                    for block in range(self.num_blocks_):
+                        self.W_[block] = np.hstack((self.W_[block], w[block]))
+                        self.T_[block] = np.hstack((self.T_[block], t[block]))
+                    pseudoinv = np.dot(weights, np.linalg.pinv(np.dot(self.P_.T, weights)))
+                    self.R_ = pseudoinv
+                    pseudoinv = np.dot(pseudoinv, np.linalg.pinv(np.dot(self.Ts_.T, self.Ts_)))
+                    pseudoinv = np.dot(pseudoinv, self.Ts_.T)
+                    self.beta_ = np.dot(pseudoinv, Y)
 
             return self
 
@@ -337,7 +354,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     # 3. Calculate block loadings w1, w2, ... , superweights a1, a2, ...
                     w = []
                     a = []
-                    for indices, block in zip(feature_indices, range(self.num_blocks)):
+                    for indices, block in zip(feature_indices, range(self.num_blocks_)):
                         partialloading = eigenv[indices[0]:indices[1]]
                         w.append(partialloading / np.linalg.norm(partialloading))
                         a.append(np.linalg.norm(partialloading) ** 2)
@@ -355,21 +372,17 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     # TODO: Deflation of y variables is not necessary
                     COVAR = deflate_matrix.T.dot(COVAR)
 
-                    # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
-                    self.V = np.hstack((self.V, v.T))
-                    self.A = np.hstack((self.A, np.matrix(a).T))
-                    self.P = np.hstack((self.P, p.T))
-                    self.W_concat = np.hstack((self.W_concat, eigenv))
-                    for block in range(self.num_blocks):
-                        self.W[block] = np.hstack((self.W[block], w[block]))
+                    # 11. add t, w, u, v, ts, eigenv, loading and a to T_, W_, U_, V_, Ts_, weights, P_ and A_
+                    self.V_ = np.hstack((self.V_, v.T))
+                    self.A_ = np.hstack((self.A_, np.matrix(a).T))
+                    self.P_ = np.hstack((self.P_, p.T))
+                    self.W_concat_ = np.hstack((self.W_concat_, eigenv))
+                    for block in range(self.num_blocks_):
+                        self.W_[block] = np.hstack((self.W_[block], w[block]))
 
                 # TODO: The authors actually implemented a more efficient algorithm without inversion
-                self.R = self.W_concat.dot(np.linalg.pinv(self.P.T.dot(self.W_concat)))
-                self.beta = self.R.dot(self.V.T)
-
-                self.fitted = True
-
-                return self
+                self.R_ = self.W_concat_.dot(np.linalg.pinv(self.P_.T.dot(self.W_concat_)))
+                self.beta_ = self.R_.dot(self.V_.T)
 
             if num_features > num_samples:
                 # Calculate association matrices
@@ -395,18 +408,18 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     AS_Y = deflate_matrix.dot(AS_Y).dot(deflate_matrix)
                     S = AS_X.dot(AS_Y)
 
-                    # 11. add t, w, u, v, ts, eigenv, loading and a to T, W, U, V, Ts, weights, P and A
-                    self.U = np.hstack((self.U, u))
-                    self.Ts = np.hstack((self.Ts, ts))
+                    # 11. add t, w, u, v, ts, eigenv, loading and a to T_, W_, U_, V_, Ts_, weights, P_ and A_
+                    self.U_ = np.hstack((self.U_, u))
+                    self.Ts_ = np.hstack((self.Ts_, ts))
 
-                self.W_concat = X.T.dot(self.U)
+                self.W_concat_ = X.T.dot(self.U_)
                 # Normalize weights to length one per column
-                self.W_concat = self.W_concat / np.linalg.norm(self.W_concat, axis=0)
-                self.P = (X.T.dot(self.Ts)).dot(np.linalg.pinv(self.Ts.T.dot(self.Ts)))
-                self.V = (Y.T.dot(self.Ts)).dot(np.linalg.pinv(self.Ts.T.dot(self.Ts)))
+                self.W_concat_ = self.W_concat_ / np.linalg.norm(self.W_concat_, axis=0)
+                self.P_ = (X.T.dot(self.Ts_)).dot(np.linalg.pinv(self.Ts_.T.dot(self.Ts_)))
+                self.V_ = (Y.T.dot(self.Ts_)).dot(np.linalg.pinv(self.Ts_.T.dot(self.Ts_)))
 
-                self.R = self.W_concat.dot(np.linalg.pinv(self.P.T.dot(self.W_concat)))
-                self.beta = self.R.dot(self.V.T)
+                self.R_ = self.W_concat_.dot(np.linalg.pinv(self.P_.T.dot(self.W_concat_)))
+                self.beta_ = self.R_.dot(self.V_.T)
 
                 if self.calc_all:
                     # Calculate Block importances
@@ -415,7 +428,7 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                         w = []
                         t = []
                         for indices in feature_indices:
-                            partialloading = self.W_concat[indices[0]:indices[1], component:component + 1]
+                            partialloading = self.W_concat_[indices[0]:indices[1], component:component + 1]
                             weight = partialloading / np.linalg.norm(partialloading)
                             w.append(weight)
                             a.append(np.linalg.norm(partialloading) ** 2)
@@ -424,13 +437,11 @@ class MBPLS(BaseEstimator, AdditionalMethods):
 
                         # TODO: Check if this could be done more efficiently
                         # Deflate X matrix to allow correct score calculation
-                        X = X - self.Ts[:, component:component + 1].dot(self.P[:, component:component+1].T)
-                        self.A = np.hstack((self.A, np.matrix(a).T))
-                        for block in range(self.num_blocks):
-                            self.W[block] = np.hstack((self.W[block], w[block]))
-                            self.T[block] = np.hstack((self.T[block], t[block]))
-
-            self.fitted = True
+                        X = X - self.Ts_[:, component:component + 1].dot(self.P_[:, component:component+1].T)
+                        self.A_ = np.hstack((self.A_, np.matrix(a).T))
+                        for block in range(self.num_blocks_):
+                            self.W_[block] = np.hstack((self.W_[block], w[block]))
+                            self.T_[block] = np.hstack((self.T_[block], t[block]))
 
             return self
 
@@ -452,23 +463,23 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     # 1. Regress u_a against all blocks
                     weights = []
                     weights_non_normal = []
-                    for block in range(self.num_blocks):
+                    for block in range(self.num_blocks_):
                         weights.append(np.dot(Xblocks[block].T, u_a) / np.dot(u_a.T, u_a))
                         weights_non_normal.append(np.dot(Xblocks[block].T, u_a) / np.dot(u_a.T, u_a))
                         # normalize block weigths
                         weights[block] = weights[block] / np.linalg.norm(weights[block])
                     # 2. Regress block weights against rows of each block
                     scores = []
-                    for block in range(self.num_blocks):
+                    for block in range(self.num_blocks_):
                         # Diverging from Wangen and Kowalski by using regression instead of dividing by number of components
                         scores.append(np.dot(Xblocks[block], weights[block]) / np.dot(weights[block].T, weights[block]))
-                    # 3. Append all block scores in T
-                    T = np.hstack((scores))
+                    # 3. Append all block scores in T_
+                    T_ = np.hstack((scores))
                     # 4. Regress u_a against block of block scores
-                    superweights = np.dot(T.T, u_a) / np.dot(u_a.T, u_a)
+                    superweights = np.dot(T_.T, u_a) / np.dot(u_a.T, u_a)
                     superweights = superweights / np.linalg.norm(superweights)
-                    # 5. Regress superweights against T to obtain superscores
-                    superscores = np.dot(T, superweights) / np.dot(superweights.T, superweights)
+                    # 5. Regress superweights against T_ to obtain superscores
+                    superscores = np.dot(T_, superweights) / np.dot(superweights.T, superweights)
                     superscores = superscores / np.linalg.norm(superscores)
                     if run == 1:
                         pass
@@ -484,56 +495,55 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     run += 1
 
                 # 8. Calculate loading
-                loadings = [None] * self.num_blocks
-                for block in range(self.num_blocks):
+                loadings = [None] * self.num_blocks_
+                for block in range(self.num_blocks_):
                     loadings[block] = np.dot(Xblocks[block].T, superscores) / np.dot(superscores.T, superscores)
-                loading_y = Y_calc.T.dot(response_scores) / response_scores.T.dot(response_scores)
+                loading_y_ = Y_calc.T.dot(response_scores) / response_scores.T.dot(response_scores)
                 # 9. Deflate X_calc
-                for block in range(self.num_blocks):
+                for block in range(self.num_blocks_):
                     Xblocks[block] = Xblocks[block] - np.dot(superscores, loadings[block].T)
 
                 # 10. Deflate Y - No deflation of Y
                 #Y_calc = Y_calc - np.dot(superscores, response_weights.T)
 
                 # 11. Append the resulting vectors
-                self.V = np.hstack((self.V, response_weights))
-                self.loading_y = np.hstack((self.loading_y, loading_y))
-                self.U = np.hstack((self.U, response_scores))
+                self.V_ = np.hstack((self.V_, response_weights))
+                self.loading_y_ = np.hstack((self.loading_y_, loading_y_))
+                self.U_ = np.hstack((self.U_, response_scores))
                 # IDEA: Shouldn't this be the quotient
                 # superweights = superweights / np.sum(superweights, axis=0)
-                # self.A = np.hstack((self.A, superweights / np.sum(superweights, axis=0)))
-                self.A = np.hstack((self.A, superweights ** 2))  # squared for total length 1
-                self.Ts = np.hstack((self.Ts, superscores))
+                # self.A_ = np.hstack((self.A_, superweights / np.sum(superweights, axis=0)))
+                self.A_ = np.hstack((self.A_, superweights ** 2))  # squared for total length 1
+                self.Ts_ = np.hstack((self.Ts_, superscores))
                 # Concatenate the block-loadings
                 loadings = np.vstack(loadings)
-                self.P = np.hstack((self.P, loadings))
-                for block in range(self.num_blocks):
-                    self.W[block] = np.hstack((self.W[block], weights[block] * -1))
-                    self.W_non_normal[block] = np.hstack((self.W_non_normal[block], weights_non_normal[block] * -1))
-                    self.T[block] = np.hstack((self.T[block], scores[block] * -1))
+                self.P_ = np.hstack((self.P_, loadings))
+                for block in range(self.num_blocks_):
+                    self.W_[block] = np.hstack((self.W_[block], weights[block] * -1))
+                    self.W_non_normal_[block] = np.hstack((self.W_non_normal_[block], weights_non_normal[block] * -1))
+                    self.T_[block] = np.hstack((self.T_[block], scores[block] * -1))
 
             # Negate results to achieve same results as with SVD
             # TODO: Check if this makes sense
-            # self.Ts *= -1
-            # self.P *= -1
-            # self.U *= -1
-            # self.V *= -1
-            # self.loading_y *= -1
+            # self.Ts_ *= -1
+            # self.P_ *= -1
+            # self.U_ *= -1
+            # self.V_ *= -1
+            # self.loading_y_ *= -1
 
-            weights_total = np.concatenate((self.W_non_normal), axis=0)  # Concatenate weights for beta calculation
+            weights_total = np.concatenate((self.W_non_normal_), axis=0)  # Concatenate weights for beta_ calculation
             weights_total = weights_total / np.linalg.norm(weights_total, axis=0)
-            pseudoinv = np.linalg.pinv((np.dot(self.P.T, weights_total)))
-            R = np.dot(weights_total, pseudoinv)
-            self.R = R
-            self.beta = np.dot(R, self.V.T)
+            pseudoinv = np.linalg.pinv((np.dot(self.P_.T, weights_total)))
+            R_ = np.dot(weights_total, pseudoinv)
+            self.R_ = R_
+            self.beta_ = np.dot(R_, self.V_.T)
 
             # Testing R_y
-            # weights_y_norm = self.V / np.linalg.norm(self.V, axis=0)
-            # pseudoinv_y = np.linalg.pinv((np.dot(self.loading_y.T, weights_y_norm)))
+            # weights_y_norm = self.V_ / np.linalg.norm(self.V_, axis=0)
+            # pseudoinv_y = np.linalg.pinv((np.dot(self.loading_y_.T, weights_y_norm)))
             # R_y = np.dot(weights_y_norm, pseudoinv_y)
             # self.R_y = R_y
 
-            self.fitted = True
             return self
 
         elif self.method == 'SIMPLS':
@@ -553,12 +563,12 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                 u = Y.dot(q)
                 v = p
                 if comp > 0:
-                    v = v - V.dot(V.T.dot(p))
-                    u = u - T.dot(T.T.dot(u))
+                    v = v - V_.dot(V_.T.dot(p))
+                    u = u - T_.dot(T_.T.dot(u))
                 v = v / np.sqrt(v.T.dot(v))
                 S = S - v.dot(v.T.dot(S))
                 # Calculation of block importance
-                # TODO: Clear if this is the better way of calculating A
+                # TODO: Clear if this is the better way of calculating A_
                 #superweights = p.dot(np.linalg.pinv(t)).dot(u)
                 #superweights = superweights / np.linalg.norm(superweights)
                 a = []
@@ -570,34 +580,33 @@ class MBPLS(BaseEstimator, AdditionalMethods):
 
 
                 if comp == 0:
-                    R = r
-                    T = t
-                    P = p
+                    R_ = r
+                    T_ = t
+                    P_ = p
                     Q = q
-                    U = u / np.linalg.norm(u)
-                    V = v
+                    U_ = u / np.linalg.norm(u)
+                    V_ = v
                     W = w
-                    A = np.matrix(a).T  # squared for total length 1
+                    A_ = np.matrix(a).T  # squared for total length 1
                 else:
-                    R = np.hstack((R, r))
-                    T = np.hstack((T, t))
-                    P = np.hstack((P, p))
+                    R_ = np.hstack((R_, r))
+                    T_ = np.hstack((T_, t))
+                    P_ = np.hstack((P_, p))
                     Q = np.hstack((Q, q))
-                    U = np.hstack((U, u / np.linalg.norm(u)))
-                    V = np.hstack((V, v))
+                    U_ = np.hstack((U_, u / np.linalg.norm(u)))
+                    V_ = np.hstack((V_, v))
                     W = np.hstack((W, w))
-                    A = np.hstack((A, np.matrix(a).T))  # squared for total length 1
+                    A_ = np.hstack((A_, np.matrix(a).T))  # squared for total length 1
 
-            self.P = P
-            self.A = A
-            self.Ts = T
-            self.U = U
-            self.R = R
-            self.beta = R.dot(Q.T)
-            self.V = Q
-            self.W = W
+            self.P_ = P_
+            self.A_ = A_
+            self.Ts_ = T_
+            self.U_ = U_
+            self.R_ = R_
+            self.beta_ = R_.dot(Q.T)
+            self.V_ = Q
+            self.W_ = W
 
-            self.fitted = True
             return self
         else:
             raise NameError('Method you called is unknown')
@@ -620,21 +629,51 @@ class MBPLS(BaseEstimator, AdditionalMethods):
         Y_scores : np.array (optional)
         Y-scores, if y was given
         """
-        assert self.fitted == True, 'The model has not been fitted yet'
-        assert isinstance(X, list), "The different blocks have to be passed in a list"
-        # IDEA: Return scores per Block
-        # TODO: Return u scores on response variables
+        check_is_fitted(self, 'beta_')
+
+        #assert isinstance(X, list), "The different blocks have to be passed in a list"
+        # TODO: Return scores per Block
 
         if self.standardize:
-            for block in range(len(X)):
-                X[block] = self.x_scalers[block].transform(X[block])
+            if isinstance(X, list) and not isinstance(X[0], list):
+                for block in range(len(X)):
+                    # Check dimensions
+                    X[block] = check_array(X[block], dtype=np.float64)
+                    X[block] = self.x_scalers_[block].transform(X[block])
+            else:
+                # Check dimensions
+                X = check_array(X, dtype=np.float64)
+                X = [self.x_scalers_[0].transform(X)]
 
             X = np.hstack(X)
-            return X.dot(self.R)
+
+            if Y is not None:
+                Y = check_array(Y, dtype=np.float64, ensure_2d=False)
+                if Y.ndim == 1:
+                    Y = Y.reshape(-1, 1)
+                Y = self.y_scaler_.transform(Y)
+                return X.dot(self.R_), Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+            else:
+                return X.dot(self.R_)
 
         else:
+            if isinstance(X, list) and not isinstance(X[0], list):
+                for block in range(len(X)):
+                    # Check dimensions
+                    X[block] = check_array(X[block], dtype=np.float64)
+            else:
+                # Check dimensions
+                X = [check_array(X, dtype=np.float64)]
+
             X = np.hstack(X)
-            return X.dot(self.R)
+
+            if Y is not None:
+                Y = check_array(Y, dtype=np.float64, ensure_2d=False)
+                if Y.ndim == 1:
+                    Y = Y.reshape(-1, 1)
+                return X.dot(self.R_), Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+            else:
+                return X.dot(self.R_)
 
     def predict(self, X):
         """Predict y based on the fitted model
@@ -650,21 +689,53 @@ class MBPLS(BaseEstimator, AdditionalMethods):
         Predictions made based on trained model and supplied X
 
         """
-        assert self.fitted == True, 'The model has not been fitted yet'
+        check_is_fitted(self, 'beta_')
 
         if self.standardize:
-            if isinstance(X, list):
+            if isinstance(X, list) and not isinstance(X[0], list):
                 for block in range(len(X)):
-                    X[block] = self.x_scalers[block].transform(X[block])
+                    # Check dimensions
+                    X[block] = check_array(X[block], dtype=np.float64)
+                    X[block] = self.x_scalers_[block].transform(X[block])
             else:
-                raise AttributeError("The different blocks have to be passed in a list")
+                X = check_array(X, dtype=np.float64)
+                X = [self.x_scalers_[0].fit_transform(X)]
+
+
             X = np.hstack(X)
-            y_hat = self.y_scaler.inverse_transform(X.dot(self.beta))
+            y_hat = self.y_scaler_.inverse_transform(X.dot(self.beta_))
         else:
             X = np.hstack(X)
-            y_hat = X.dot(self.beta)
+            y_hat = X.dot(self.beta_)
 
-        return y_hat
+        return y_hat.squeeze()
+
+    def fit_transform(self, X, y=None, **fit_params):
+        """Fit the model and then, then transform the given data to lower dimensions.
+        """
+        # fit and transform of x and y
+        return self.fit(X, y, **fit_params).transform(X, y)
+
+    def fit_predict(self, X, Y, **fit_params):
+        """Fit to data, then predict it.
+        """
+        # TODO: Standardisierte Ergebnisse ausgeben
+        # fit the model to x and y and return their scores
+        return self.fit(X, Y, **fit_params).predict(X)
+
+    def r2_score(self, X, Y):
+        if self.standardize:
+            return metrics.r2_score(Y, self.predict(X))
+        else:
+            # When the data is not standardized, the variables have to be variance weighted
+            return metrics.r2_score(Y, self.predict(X), sample_weight=None, multioutput='variance_weighted')
+
+    def explained_variance_score(self, X, Y):
+        if self.standardize:
+            return metrics.explained_variance_score(Y, self.predict(X))
+        else:
+            # When the data is not standardized, the variables have to be variance weighted
+            return metrics.explained_variance_score(Y, self.predict(X), sample_weight=None, multioutput='variance_weighted')
 
     def plot(self, num_components='Component that should be plotted'):
         """
@@ -707,27 +778,27 @@ class MBPLS(BaseEstimator, AdditionalMethods):
             fig = plt.figure()
             plt.suptitle("Component {:d}".format(comp + 1), fontsize=14, fontweight='bold')
 
-            gs1 = GridSpec(1, self.num_blocks, top=0.875, bottom=0.85, right=0.95)
-            for block in range(self.num_blocks):
+            gs1 = GridSpec(1, self.num_blocks_, top=0.875, bottom=0.85, right=0.95)
+            for block in range(self.num_blocks_):
                 plt.subplot(gs1[0, block])
-                plt.text(0.5, 0.5, "X-Block {:d}\nImportance: {:.0f}%".format(block + 1, self.A[block, comp] * 100),
+                plt.text(0.5, 0.5, "X-Block {:d}\nImportance: {:.0f}%".format(block + 1, self.A_[block, comp] * 100),
                          fontsize=12, horizontalalignment='center')
                 plt.axis('off')
 
-            gs2 = GridSpec(2, self.num_blocks, top=0.8, hspace=0.45, wspace=0.45, right=0.95)
+            gs2 = GridSpec(2, self.num_blocks_, top=0.8, hspace=0.45, wspace=0.45, right=0.95)
             loading_axes = []
             score_axes = []
             # List for inverse transforming the loadings/weights
             W_inv_trans = []
-            for block in range(self.num_blocks):
+            for block in range(self.num_blocks_):
                 # Inverse transforming weights/loadings
                 # TODO: Does this make sense?
                 if self.standardize:
-                    W_inv_trans.append(self.x_scalers[block].inverse_transform(self.W[block][:, comp]))
-                    #W_inv_trans.append(self.W[block][:, comp])
+                    W_inv_trans.append(self.x_scalers_[block].inverse_transform(self.W_[block][:, comp]))
+                    #W_inv_trans.append(self.W_[block][:, comp])
                 else:
-                    W_inv_trans.append(self.W[block][:, comp])
-                #W_inv_trans.append(self.P[block][:, comp])
+                    W_inv_trans.append(self.W_[block][:, comp])
+                #W_inv_trans.append(self.P_[block][:, comp])
 
 
                 if len(loading_axes) == 0:
@@ -744,10 +815,10 @@ class MBPLS(BaseEstimator, AdditionalMethods):
 
                     # Scores
                     score_axes.append(plt.subplot(gs2[1, block]))
-                    plt.plot(self.T[block][:, comp])
-                    step = int(self.T[block].shape[0] / 4)
-                    plt.xticks(np.arange(0, self.T[block].shape[0], step),
-                               np.arange(1, self.T[block].shape[0] + 1, step))
+                    plt.plot(self.T_[block][:, comp])
+                    step = int(self.T_[block].shape[0] / 4)
+                    plt.xticks(np.arange(0, self.T_[block].shape[0], step),
+                               np.arange(1, self.T_[block].shape[0] + 1, step))
                     plt.ylabel("Score")
                     plt.xlabel("Sample")
                     plt.grid()
@@ -763,10 +834,10 @@ class MBPLS(BaseEstimator, AdditionalMethods):
                     plt.grid()
                     # Scores
                     score_axes.append(plt.subplot(gs2[1, block]))
-                    plt.plot(self.T[block][:, comp])
-                    step = int(self.T[block].shape[0] / 4)
-                    plt.xticks(np.arange(0, self.T[block].shape[0], step),
-                               np.arange(1, self.T[block].shape[0] + 1, step))
+                    plt.plot(self.T_[block][:, comp])
+                    step = int(self.T_[block].shape[0] / 4)
+                    plt.xticks(np.arange(0, self.T_[block].shape[0], step),
+                               np.arange(1, self.T_[block].shape[0] + 1, step))
                     # plt.setp(score_axes[block].get_yticklabels(), visible=False)
                     plt.xlabel("Sample")
                     plt.grid()
@@ -778,9 +849,9 @@ class MBPLS(BaseEstimator, AdditionalMethods):
         ax = plt.subplot(gs3[0, 0])
         width = 0.8 / len(num_components)
         for i, comp in enumerate(num_components):
-            ax.bar(np.arange(self.num_blocks) + 0.6 + i * width, 100 * np.ravel(self.A[:, comp]), width=width, \
+            ax.bar(np.arange(self.num_blocks_) + 0.6 + i * width, 100 * np.ravel(self.A_[:, comp]), width=width, \
                    label="Component {}".format(comp + 1))
-        ax.set_xticklabels(list(np.arange(self.num_blocks) + 1))
+        ax.set_xticklabels(list(np.arange(self.num_blocks_) + 1))
         ax.xaxis.set_major_locator(ticker.IndexLocator(base=1, offset=0.4))
         ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
         ax.set_xlabel("Block")
