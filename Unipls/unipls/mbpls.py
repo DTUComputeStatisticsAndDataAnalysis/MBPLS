@@ -567,18 +567,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     u = u - T_.dot(T_.T.dot(u))
                 v = v / np.sqrt(v.T.dot(v))
                 S = S - v.dot(v.T.dot(S))
-                # Calculation of block importance
-                # TODO: Clear if this is the better way of calculating A_
-                #superweights = p.dot(np.linalg.pinv(t)).dot(u)
-                #superweights = superweights / np.linalg.norm(superweights)
-                a = []
-
-                for indices in feature_indices:
-                    #a.append(np.linalg.norm(superweights[indices[0]:indices[1]]) ** 2)
-                    # or
-                    a.append(np.linalg.norm((w / np.linalg.norm(w))[indices[0]:indices[1]])**2)
-
-
+                
                 if comp == 0:
                     R_ = r
                     T_ = t
@@ -587,7 +576,6 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     U_ = u / np.linalg.norm(u)
                     V_ = v
                     W = w
-                    A_ = np.matrix(a).T  # squared for total length 1
                 else:
                     R_ = np.hstack((R_, r))
                     T_ = np.hstack((T_, t))
@@ -596,10 +584,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     U_ = np.hstack((U_, u / np.linalg.norm(u)))
                     V_ = np.hstack((V_, v))
                     W = np.hstack((W, w))
-                    A_ = np.hstack((A_, np.matrix(a).T))  # squared for total length 1
-
+                    
             self.P_ = P_
-            self.A_ = A_
             self.Ts_ = T_
             self.U_ = U_
             self.R_ = R_

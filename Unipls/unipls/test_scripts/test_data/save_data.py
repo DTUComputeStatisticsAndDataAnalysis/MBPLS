@@ -9,7 +9,7 @@ Use this script only to create new reference data (csv files) for post installat
 """
 # define Parameters
 rand_seed = 25
-num_samples = 20
+num_samples = 50
 num_vars_x1 = 25
 num_vars_x2 = 45
 noise = 5      # add noise between 0..10
@@ -34,32 +34,50 @@ x2 = np.dot(y[:, 1:2], loading2.T)
 x1 = np.random.normal(x1, 0.05*noise)
 x2 = np.random.normal(x2, 0.05*noise)
 
-#%% Fit MBPLS model and assert that result matches reference result
-# Atm SIMPLS yields most different results; Scores and Loadings differ slightly between methods also
+# Separate Data into training and test sets
+indices = np.random.choice(np.arange(num_samples),num_samples,replace=False)
+train, test = indices[:round(num_samples*8/10)], indices[round(num_samples*8/10):]
+x1_train, x2_train = x1[train,:], x2[train,:]
+x1_test, x2_test = x1[test,:], x2[test,:]
+y_train, y_test = y[train,:], y[test,:]
+
+#%% Fit MBPLS model, transform and predict and save results as reference
+# SIMPLS doesn't give Multiblock results, therefore left out for A (block importance) and T (block scores)
 from unipls.mbpls import MBPLS
-mbpls_model = MBPLS(n_components=2,method='UNIPALS',standardize=False)
-mbpls_model.fit([x1, x2], y)
-    
-
-#%% Save results as reference data for installation testing   
 from numpy import savetxt, concatenate
+methods = ['UNIPALS', 'NIPALS', 'KERNEL', 'SIMPLS']
+for method in methods:
+    # Fit MBPLS models
+    mbpls_model = MBPLS(n_components=2,method=method,standardize=True)
+    mbpls_model.fit([x1_train, x2_train], y_train)
+    U = mbpls_model.U_
+    V = mbpls_model.V_
+    Ts = mbpls_model.Ts_
+    P = mbpls_model.P_
+    P1 = P[:num_vars_x1, :]
+    P2 = P[num_vars_x1:, :]
+    beta = mbpls_model.beta_
+    if method is not 'SIMPLS': 
+        T = mbpls_model.T_
+        A = mbpls_model.A_
+        savetxt('T_%s.csv' % method, concatenate(T,axis=1), delimiter=',')
+        savetxt('A_%s.csv' % method, A, delimiter=',')
+    savetxt('P1_%s.csv' % method, P1, delimiter=',')
+    savetxt('P2_%s.csv' % method, P2, delimiter=',')
+    savetxt('Ts_%s.csv' % method, Ts, delimiter=',')
+    savetxt('U_%s.csv' % method, U, delimiter=',')
+    savetxt('V_%s.csv' % method, V, delimiter=',')
+    savetxt('beta_%s.csv' % method, beta, delimiter=',')
+    
+    # Transform test data using MBPLS model
+    Ts_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
+    savetxt('Ts_test_%s.csv' % method, Ts_test, delimiter=',')
+    savetxt('U_test_%s.csv' % method, U_test, delimiter=',')
+    
+    # Predict y_test using MBPLS model
+    y_predict = mbpls_model.predict([x1_test, x2_test])
+    savetxt('Y_predict_test_%s.csv' % method, y_predict, delimiter=',')
 
-U = mbpls_model.U
-V = mbpls_model.V
-Ts = mbpls_model.Ts
-T = mbpls_model.T
-P = mbpls_model.P
-A = mbpls_model.A
-P1 = P[:num_vars_x1, :]
-P2 = P[num_vars_x1:, :]
-beta = mbpls_model.beta
- 
-savetxt('T.csv', concatenate(T,axis=1), delimiter=',')
-savetxt('P1.csv', P1, delimiter=',')
-savetxt('P2.csv', P2, delimiter=',')
-savetxt('Ts.csv', Ts, delimiter=',')
-savetxt('U.csv', U, delimiter=',')
-savetxt('V.csv', V, delimiter=',')
-savetxt('beta.csv', beta, delimiter=',')
-savetxt('A.csv', A, delimiter=',')
+
+
 
