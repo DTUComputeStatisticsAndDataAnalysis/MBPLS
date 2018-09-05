@@ -8,7 +8,7 @@
 #
 # License: 3-clause BSD
 
-from . import mbpls, data, test_scripts
+from . import mbpls, data, tests
 
 __all__ = ["mbpls", "data", "test_scripts"]
 

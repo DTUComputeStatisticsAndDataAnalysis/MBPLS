@@ -40,7 +40,7 @@ y_train, y_test = y[train,:], y[test,:]
 
 #%% Fit MBPLS model and assert that result matches reference result
 # SIMPLS doesn't give Multiblock results, therefore left out for A (block importance) and T (block scores)
-from unipls.mbpls import MBPLS
+from mbpls.mbpls import MBPLS
 predictions = []
 methods = ['UNIPALS', 'NIPALS', 'KERNEL', 'SIMPLS']
 for method in methods:

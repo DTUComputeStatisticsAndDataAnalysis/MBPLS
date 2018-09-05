@@ -31,8 +31,8 @@ Model (1 x 2) first entry : 0 = no cross validation (default), 1 = cross validat
 import matplotlib
 matplotlib.use('QT5Agg')
 from matplotlib import pyplot as plt
-from unipls.data.get_data import data_path
-from unipls.mbpls import MBPLS
+from mbpls.data.get_data import data_path
+from mbpls.mbpls import MBPLS
 import numpy as np
 np.set_printoptions(linewidth=160)
 import os

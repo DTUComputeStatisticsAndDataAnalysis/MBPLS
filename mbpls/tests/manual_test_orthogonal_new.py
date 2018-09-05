@@ -8,14 +8,14 @@ Testing the package with orthogonal data
 """
 
 from matplotlib import pyplot as plt
-from unipls.data.get_data import data_path
-from unipls.mbpls import MBPLS
-from unipls.data.get_data import orthogonal_data
+from mbpls.data.get_data import data_path
+from mbpls.mbpls import MBPLS
+from mbpls.data.get_data import orthogonal_data
 import numpy as np
 
 plt.ioff()
 
-x1, x2, x3, y = orthogonal_data(100, num_of_variables_main_lin_comb=0)
+x1, x2, x3, y = orthogonal_data(100)
 
 
 def plotdata(spectra, yields):
@@ -37,26 +37,23 @@ plt.close('all')
 # x2_process, y_process = preprocess(x2, y)
 
 # Plot preprocessed datablocks X1 and X2 colored according to y1, y2, y3
-plt.subplot(221)
+plt.subplot(311)
 plotdata(x1, y[:, 0:1])
 plt.title('Block x1 colored by y[:,0]')
-plt.subplot(222)
-plotdata(x1, y[:, 1:2])
-plt.title('Block x1 colored by y[:,1]')
-
-plt.subplot(223)
+plt.subplot(312)
 plotdata(x2, y[:, 0:1])
 plt.title('Block x2 colored by y[:,0]')
-plt.subplot(224)
-plotdata(x2, y[:, 1:2])
-plt.title('Block x2 colored by y[:,1]')
+plt.subplot(313)
+plotdata(x3, y[:, 0:1])
+plt.title('Block x3 colored by y[:,0]')
+plt.tight_layout()
 plt.show()
 
 # Here follows the calculation
 
 pls_own = MBPLS(n_components=2)
 
-pls_own.fit([x1, x2], y[:, 0:1])
+pls_own.fit([x1, x2, x3], y[:, 0:1])
 
 # Specify here which Component loadings and scores to plot below
 pls_own.plot(1)

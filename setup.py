@@ -10,11 +10,11 @@
 
 from setuptools import setup, find_packages
 
-import unipls
+import mbpls
 
-NAME = "unipls"
-DESCRIPTION = "A set of several partial least squares algorithms"
-VERSION = unipls.__version__
+NAME = "mbpls"
+DESCRIPTION = "An implementation of the most common partial least squares algorithm as multi-block methods"
+VERSION = mbpls.__version__
 AUTHORS = "Andreas Baum, Laurent Vermue"
 AUTHOR_MAILS = "<andba@dtu.dk>, <lauve@dtu.dk>"
 LICENSE = 'new BSD'
@@ -23,6 +23,7 @@ LICENSE = 'new BSD'
 NUMPY_MIN_VERSION = '1.13.3'
 MATPLOTLIB_MIN_VERSION = '2.1.1'
 SCIPY_MIN_VERSION = '1.0.0'
+SCIKIT_LEARN_MIN_VERSION = '0.18.0'
 
 setup(name=NAME,
       version=VERSION,
@@ -41,12 +42,15 @@ setup(name=NAME,
                    'Operating System :: POSIX',
                    'Operating System :: Unix',
                    'Operating System :: MacOS',
+                   'Programming Language :: Python :: 3.5',
                    'Programming Language :: Python :: 3.6',
+                   'Programming Language :: Python :: 3.7',
                    'Development Status :: 2 - Pre-Alpha'
                    ],
       install_requires=[
           'numpy>={0}'.format(NUMPY_MIN_VERSION),
           'matplotlib>={0}'.format(MATPLOTLIB_MIN_VERSION),
-          'scipy>={0}'.format(SCIPY_MIN_VERSION)
+          'scipy>={0}'.format(SCIPY_MIN_VERSION),
+          'scikit-learn>={0}'.format(SCIKIT_LEARN_MIN_VERSION)
             ]
       )

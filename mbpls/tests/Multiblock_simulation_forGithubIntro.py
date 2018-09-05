@@ -38,7 +38,7 @@ x1 = np.random.normal(x1, 0.05*noise)
 x2 = np.random.normal(x2, 0.05*noise)
 
 #%% Fit MBPLS model
-from unipls.mbpls import MBPLS
+from mbpls.mbpls import MBPLS
 mbpls_model = MBPLS(n_components=2,method='UNIPALS',standardize=False)
 mbpls_model.fit([x1, x2], y)
 

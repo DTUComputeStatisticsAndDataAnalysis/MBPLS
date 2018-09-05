@@ -43,7 +43,7 @@ y_train, y_test = y[train,:], y[test,:]
 
 #%% Fit MBPLS model, transform and predict and save results as reference
 # SIMPLS doesn't give Multiblock results, therefore left out for A (block importance) and T (block scores)
-from unipls.mbpls import MBPLS
+from mbpls.mbpls import MBPLS
 from numpy import savetxt, concatenate
 methods = ['UNIPALS', 'NIPALS', 'KERNEL', 'SIMPLS']
 for method in methods:

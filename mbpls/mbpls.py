@@ -9,16 +9,9 @@ Created on Mon Jan 15 14:31:48 2018
 
 from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted, check_consistent_length
-# Add this class to estimator checks
-from sklearn.utils import estimator_checks
-estimator_checks.CROSS_DECOMPOSITION.append('MBPLS')
 from sklearn import metrics
-import collections
 import numpy as np
-from six import with_metaclass
 from sklearn.preprocessing import StandardScaler
-from abc import ABCMeta, abstractmethod
-from sklearn.exceptions import DataConversionWarning
 
 __all__ = ['MBPLS']
 

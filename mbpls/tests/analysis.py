@@ -1,4 +1,4 @@
-from unipls.mbpls import MBPLS
+from mbpls.mbpls import MBPLS
 from sklearn import metrics
 import scipy
 
@@ -9,7 +9,7 @@ import math
 import time
 
 
-from unipls.data.get_data import data_path
+from mbpls.data.get_data import data_path
 # def loaddata():
 #     from scipy.io import loadmat
 #     data = loadmat(os.path.join(data_path(), 'MBdata.mat'))
