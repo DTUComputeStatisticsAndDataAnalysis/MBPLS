@@ -1,24 +1,15 @@
-from unipls.data.get_data import data_path
 from unipls.mbpls import MBPLS
-
-import numpy as np
-import os
 from sklearn import metrics
 import scipy
-from multiprocessing import cpu_count
 
 # If running on server
 import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
-import numpy as np
+matplotlib.use('QT5Agg')
 import math
-from itertools import chain
 import time
-import collections
-import socket
-import os
 
+
+from unipls.data.get_data import data_path
 # def loaddata():
 #     from scipy.io import loadmat
 #     data = loadmat(os.path.join(data_path(), 'MBdata.mat'))
@@ -116,6 +107,7 @@ datasets = [
     #([np.repeat(np.repeat(x1, 80, axis=0), 16, axis=1)], np.repeat(y[:, 0:3], 80, axis=0)),
     #([np.repeat(np.repeat(x1, 160, axis=0), 32, axis=1)], np.repeat(y[:, 0:3], 160, axis=0)),
     #([np.repeat(np.repeat(x1, 320, axis=0), 64, axis=1)], np.repeat(y[:, 0:3], 320, axis=0)),
+    ([x1, x2], y),
     ([x1, x2], y),
 ]
 
@@ -262,7 +254,8 @@ if plot_timing:
         plt.ylim(bottom=0)
         plt.title("\nTiming results on dataset #{:d} for {:d} repeated runs\n"
                      "{:s}\n"
-                     "Number of latent variables: {:d}".format(k + 1, reruns, datasets_shape[k], number_components))
+                     "Number of latent variables: {:d}\n"
+                  "All parameters calculated: {}".format(k + 1, reruns, datasets_shape[k], number_components, calc_all))
         plt.tight_layout()
 
         plt.show()
@@ -276,7 +269,7 @@ if plot_timing_graph:
     timing_results_mean = timing_results_total.mean(axis=2)
     plt.figure(figsize=(11, 8))
     for k in range(timing_results_total.shape[0]):
-        plt.plot(timing_results_mean[k], label=methods[k][0])
+        plt.plot(np.arange(len(timing_results_mean[k])), timing_results_mean[k], '-o', label=methods[k][0])
     plt.ylabel('seconds')
     plt.xlabel('Dataset size')
     plt.xticks(np.arange(len(datasets_shape)), datasets_shape)

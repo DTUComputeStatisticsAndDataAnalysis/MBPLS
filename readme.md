@@ -1,3 +1,20 @@
+## Partial Least Squares Package
+
+Info text here.
+
+### Installation
+
+* `$ git clone https://github.com/b0nsaii/MBPLS.git`
+* Install options 
+    * Install as developing package
+        * Move to /directory/to/MBPLS
+        * `$ pip install -e Unipls`
+    * Add the directory to your systempath
+        * `$ export PYTHONPATH="/directory/to/MBPLS:$PYTHONPATH"
+* Now you can import the MBPLS class by typing\
+`from unipls.mbpls import MBPLS`
+
+
 13.03.18
 
 - NIPALS, SIMPLS and UNIPALS PLS algorithms versus Scikit Learn PLS result (in PLS folder)
@@ -11,5 +28,3 @@ TODO
 
 - code cleanup
 - optional block weighting 
-
-author: Andreas Baum, andba@dtu.dk 

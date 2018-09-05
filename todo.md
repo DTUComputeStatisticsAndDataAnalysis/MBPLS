@@ -11,6 +11,7 @@
 - [x] Transfer all algorithms to OOP and align structure
 - [x] Plot method in MBPLS-Class
 - [x] Transfer MBPLS_Lindgreen to PLS-Class
+- [ ] Implement Kernel method
 
 **Testing the package**
 

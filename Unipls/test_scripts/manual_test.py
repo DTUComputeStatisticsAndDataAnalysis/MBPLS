@@ -27,10 +27,14 @@ Model (1 x 2) first entry : 0 = no cross validation (default), 1 = cross validat
 @edited: Laurent Vermue, lauve@dtu.dk
 """
 #%%
+# When using the server
+import matplotlib
+matplotlib.use('QT5Agg')
 from matplotlib import pyplot as plt
 from unipls.data.get_data import data_path
 from unipls.mbpls import MBPLS
 import numpy as np
+np.set_printoptions(linewidth=160)
 import os
 
 plt.ioff()
@@ -93,17 +97,19 @@ NIPALS = MBPLS(n_components=5, method='NIPALS', standardize=True)
 SIMPLS = MBPLS(n_components=5, method='SIMPLS', standardize=True)
 KERNEL = MBPLS(n_components=5, method='KERNEL', standardize=True)
 
+### Variables >> Samples
 UNI.fit([x1, x2], y[:, 0:3])
 NIPALS.fit([x1, x2], y[:, 0:3])
 SIMPLS.fit([x1, x2], y[:, 0:3])
 KERNEL.fit([x1, x2], y[:, 0:3])
 
-#KERNEL.fit([x1.T, x2.T], np.repeat(y[:, 0:1], 5, axis=0))
-# Calculate normalized weights in one shot
-#(x1_new.T.dot(KERNEL.U[:,1:2])/np.linalg.norm(x1_new.T.dot(KERNEL.U[:,1:2])))[:10]
-#x1_new = UNI.x_scalers[0].transform(x1)
+_, T_ = UNI.transform([x1, x2])
 
-##### Testing
+### Samples >> Variables
+#UNI.fit([np.repeat(x1[:, 0:10], 10, axis=0), np.repeat(x2[:, 0:10], 10, axis=0)], np.repeat(y[:, 0:3], 10, axis=0))
+#NIPALS.fit([np.repeat(x1[:, 0:10], 10, axis=0), np.repeat(x2[:, 0:10], 10, axis=0)], np.repeat(y[:, 0:3], 10, axis=0))
+#SIMPLS.fit([np.repeat(x1[:, 0:10], 10, axis=0), np.repeat(x2[:, 0:10], 10, axis=0)], np.repeat(y[:, 0:3], 10, axis=0))
+#KERNEL.fit([np.repeat(x1[:, 0:10], 10, axis=0), np.repeat(x2[:, 0:10], 10, axis=0)], np.repeat(y[:, 0:3], 10, axis=0))
 
 
 
