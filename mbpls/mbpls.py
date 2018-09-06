@@ -753,6 +753,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
             X_comp = np.hstack(X)
 
+            Ts_ = X_comp.dot(self.R_)
+
             if Y is not None:
                 Y = check_array(Y, dtype=np.float64, ensure_2d=False)
                 if Y.ndim == 1:
@@ -767,10 +769,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                             T_[block] = X[block].dot(self.W_[block][:, comp:comp+1])
                         else:
                             # deflate the block
-                            X[block] = X[block] - self.Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
+                            X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
                             T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp+1])))
 
-                return X_comp.dot(self.R_), T_ , Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+                return Ts_, T_ , Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
             else:
                 # Here the block scores are calculated iteratively for new blocks
                 T_ = []
@@ -781,9 +783,9 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                             T_[block] = X[block].dot(self.W_[block][:, comp:comp + 1])
                         else:
                             # deflate the block
-                            X[block] = X[block] - self.Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
+                            X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
                             T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
-                return X_comp.dot(self.R_), T_
+                return Ts_, T_
 
         else:
             if isinstance(X, list) and not isinstance(X[0], list):
@@ -795,6 +797,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                 X = [check_array(X, dtype=np.float64)]
 
             X_comp = np.hstack(X)
+
+            Ts_ = X_comp.dot(self.R_)
 
             if Y is not None:
                 Y = check_array(Y, dtype=np.float64, ensure_2d=False)
@@ -809,9 +813,9 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                                 T_[block] = X[block].dot(self.W_[block][:, comp:comp + 1])
                             else:
                                 # deflate the block
-                                X[block] = X[block] - self.Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
+                                X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
                                 T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
-                return X_comp.dot(self.R_), T_, Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0), T_
+                return Ts_, T_, Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0), T_
             else:
                 # Here the block scores are calculated iteratively for new blocks
                 T_ = []
@@ -822,9 +826,9 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                             T_[block] = X[block].dot(self.W_[block][:, comp:comp + 1])
                         else:
                             # deflate the block
-                            X[block] = X[block] - self.Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
+                            X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
                             T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
-                return X_comp.dot(self.R_), T_
+                return Ts_, T_
 
     def predict(self, X):
         """Predict y based on the fitted model
