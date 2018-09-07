@@ -54,13 +54,13 @@ for method in methods:
     V = mbpls_model.V_
     Ts = mbpls_model.Ts_
     P = mbpls_model.P_
-    P1 = P[:num_vars_x1, :]
-    P2 = P[num_vars_x1:, :]
+    P1 = P[0]
+    P2 = P[1]
     beta = mbpls_model.beta_
     if method is not 'SIMPLS': 
         T = mbpls_model.T_
         A = mbpls_model.A_
-        savetxt('T_%s.csv' % method, concatenate(T,axis=1), delimiter=',')
+        savetxt('T_%s.csv' % method, concatenate(T, axis=1), delimiter=',')
         savetxt('A_%s.csv' % method, A, delimiter=',')
     savetxt('P1_%s.csv' % method, P1, delimiter=',')
     savetxt('P2_%s.csv' % method, P2, delimiter=',')
@@ -70,7 +70,11 @@ for method in methods:
     savetxt('beta_%s.csv' % method, beta, delimiter=',')
     
     # Transform test data using MBPLS model
-    Ts_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
+    if method is not 'SIMPLS':
+        Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
+        savetxt('T_test_%s.csv' % method, concatenate(T_test, axis=1), delimiter=',')
+    else:
+        Ts_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
     savetxt('Ts_test_%s.csv' % method, Ts_test, delimiter=',')
     savetxt('U_test_%s.csv' % method, U_test, delimiter=',')
     

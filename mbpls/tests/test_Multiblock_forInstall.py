@@ -52,15 +52,29 @@ for method in methods:
         T = np.concatenate(mbpls_model.T_, axis=1)
         T_ref = np.genfromtxt('./test_data/T_%s.csv' % method, delimiter=',')
         assert(np.allclose(abs(T), abs(T_ref)))
+        
         A = mbpls_model.A_
         A_ref = np.genfromtxt('./test_data/A_%s.csv' % method, delimiter=',')
         assert(np.allclose(A, A_ref))
+        
+        Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
+        T_test_ref = np.genfromtxt('./test_data/T_test_%s.csv' % method, delimiter=',')
+        T_test = np.concatenate(T_test, axis=1)
+        assert(np.allclose(abs(T_test), abs(T_test_ref)))
     
-    P1 = mbpls_model.P_[:num_vars_x1,:]
+    else:
+        Ts_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
+    
+    Ts_test_ref = np.genfromtxt('./test_data/Ts_test_%s.csv' % method, delimiter=',')
+    assert(np.allclose(Ts_test, Ts_test_ref))
+    U_test_ref = np.genfromtxt('./test_data/U_test_%s.csv' % method, delimiter=',')
+    assert(np.allclose(U_test, U_test_ref))
+    
+    P1 = mbpls_model.P_[0]
     P1_ref = np.genfromtxt('./test_data/P1_%s.csv' % method, delimiter=',')
     assert(np.allclose(abs(P1), abs(P1_ref)))
     
-    P2 = mbpls_model.P_[num_vars_x1:,:]
+    P2 = mbpls_model.P_[1]
     P2_ref = np.genfromtxt('./test_data/P2_%s.csv' % method, delimiter=',')
     assert(np.allclose(abs(P2), abs(P2_ref)))
     
@@ -80,12 +94,7 @@ for method in methods:
     beta_ref = np.genfromtxt('./test_data/beta_%s.csv' % method, delimiter=',')
     assert(np.allclose(beta, beta_ref))
     
-    Ts_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
-    Ts_test_ref = np.genfromtxt('./test_data/Ts_test_%s.csv' % method, delimiter=',')
-    assert(np.allclose(Ts_test, Ts_test_ref))
-    U_test_ref = np.genfromtxt('./test_data/U_test_%s.csv' % method, delimiter=',')
-    assert(np.allclose(U_test, U_test_ref))
-    
+       
     y_predict = mbpls_model.predict([x1_test, x2_test])
     y_predict_ref = np.genfromtxt('./test_data/Y_predict_test_%s.csv' % method, delimiter=',')
     assert(np.allclose(y_predict, y_predict_ref))
@@ -95,7 +104,6 @@ for method in methods:
 # Assert that all methods agree in prediction  
 for prediction in predictions:
     assert(np.allclose(predictions[0],prediction,atol=1e-3))
-
 
     
 

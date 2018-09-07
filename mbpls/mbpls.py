@@ -114,9 +114,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
         self.W_ = []
         self.W_non_normal_ = []
-        self.T_ = []
-        self.A_ = np.empty((self.num_blocks_, 0))
-        self.A_corrected_ = np.empty((self.num_blocks_, 0))
+        if self.method is not 'SIMPLS':
+            self.A_ = np.empty((self.num_blocks_, 0))
+            self.A_corrected_ = np.empty((self.num_blocks_, 0))
+            self.T_ = []
         self.explained_var_xblocks_ = np.empty((self.num_blocks_, 0))
         self.V_ = np.empty((Y.shape[1], 0))
         self.loading_y_ = np.empty((Y.shape[1], 0))
@@ -128,7 +129,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         for block in range(self.num_blocks_):
             self.W_.append(np.empty((X[block].shape[1], 0)))
             self.W_non_normal_.append(np.empty((X[block].shape[1], 0)))
-            self.T_.append(np.empty((X[block].shape[0], 0)))
+            if self.method is not 'SIMPLS':
+                self.T_.append(np.empty((X[block].shape[0], 0)))
 
         # Concatenate X blocks
         X = np.hstack(X)
@@ -666,6 +668,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             return self
 
         elif self.method == 'SIMPLS':
+            from warnings import warn
+            warn("Method 'SIMPLS' does not calculate A_ and T_!")
             # de Jong 1993
             S = X.T.dot(Y)
             for comp in range(self.n_components):
@@ -761,31 +765,37 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     Y = Y.reshape(-1, 1)
                 Y = self.y_scaler_.transform(Y)
                 # Here the block scores are calculated iteratively for new blocks
-                T_ = []
-                for block in range(self.num_blocks_):
-                    T_.append(np.empty((X[block].shape[0], 0)))
-                    for comp in range(self.n_components):
-                        if comp == 0:
-                            T_[block] = X[block].dot(self.W_[block][:, comp:comp+1])
-                        else:
-                            # deflate the block
-                            X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
-                            T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp+1])))
+                if self.method is not 'SIMPLS': 
+                    T_ = []
+                    for block in range(self.num_blocks_):
+                        T_.append(np.empty((X[block].shape[0], 0)))
+                        for comp in range(self.n_components):
+                            if comp == 0:
+                                T_[block] = X[block].dot(self.W_[block][:, comp:comp+1])
+                            else:
+                                # deflate the block
+                                X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
+                                T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp+1])))
 
-                return Ts_, T_ , Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+                    return Ts_, T_ , Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+                else:
+                    return Ts_, Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
             else:
-                # Here the block scores are calculated iteratively for new blocks
-                T_ = []
-                for block in range(self.num_blocks_):
-                    T_.append(np.empty((X[block].shape[0], 0)))
-                    for comp in range(self.n_components):
-                        if comp == 0:
-                            T_[block] = X[block].dot(self.W_[block][:, comp:comp + 1])
-                        else:
-                            # deflate the block
-                            X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
-                            T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
-                return Ts_, T_
+                if self.method is not 'SIMPLS':
+                    # Here the block scores are calculated iteratively for new blocks
+                    T_ = []
+                    for block in range(self.num_blocks_):
+                        T_.append(np.empty((X[block].shape[0], 0)))
+                        for comp in range(self.n_components):
+                            if comp == 0:
+                                T_[block] = X[block].dot(self.W_[block][:, comp:comp + 1])
+                            else:
+                                # deflate the block
+                                X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
+                                T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
+                    return Ts_, T_
+                else:
+                    return Ts_
 
         else:
             if isinstance(X, list) and not isinstance(X[0], list):
