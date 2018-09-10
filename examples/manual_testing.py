@@ -104,6 +104,7 @@ SIMPLS.fit([x1, x2], y[:, 0:3])
 KERNEL.fit([x1, x2], y[:, 0:3])
 
 _, T_ = UNI.transform([x1, x2])
+#a,b, c = UNI.transform([np.repeat(x1, 2, axis=0),np.repeat(x1, 2, axis=0)], np.repeat(y[:, 0:3], 2, axis=0))
 
 ### Samples >> Variables
 #UNI.fit([np.repeat(x1[:, 0:10], 10, axis=0), np.repeat(x2[:, 0:10], 10, axis=0)], np.repeat(y[:, 0:3], 10, axis=0))
