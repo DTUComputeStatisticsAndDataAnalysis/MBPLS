@@ -8,8 +8,8 @@
 #
 # License: 3-clause BSD
 
-from . import mbpls, data, tests
+from . import mbpls, data
 
-__all__ = ["mbpls", "data", "test_scripts"]
+__all__ = ["mbpls", "data"]
 
 __version__ = "0.0.1"
