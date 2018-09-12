@@ -19,8 +19,15 @@ def data_path():
     path = os.path.dirname(os.path.abspath(__file__))
     return path
 
-def orthogonal_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, params_block_three = 3, \
-                    num_of_variables_main_lin_comb = 9, num_of_batches = 1):
+def load_MBdata():
+    from scipy.io import loadmat
+    data = loadmat(os.path.join(data_path(), 'MBdata.mat'))
+    y = data['Y']
+    x = data['X']
+    return x, y
+
+def orthogonal_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, params_block_three = 4, \
+                    num_of_variables_main_lin_comb = 0, num_of_batches = 1, random_state=None):
     """This function creates a dataset with three X-blocks, which are completely orthogonal
     amongst each other and one Y-block, that has two response variables, which are a linear combination of
     the variables defined for the three blocks.
@@ -65,9 +72,11 @@ def orthogonal_data(num_of_samples = 11, params_block_one = 4, params_block_two 
 
     ## X1
     if num_of_batches == 1:
-        X = np.dstack(ortho_group.rvs(num_of_samples, num_of_batches)).transpose((0, 2, 1))[:, :, 0:total_params]
+        X = np.dstack(ortho_group.rvs(num_of_samples, num_of_batches, random_state=random_state))\
+                                                        .transpose((0, 2, 1))[:, :, 0:total_params]
     else:
-        X = ortho_group.rvs(num_of_samples, num_of_batches).transpose((0,2,1))[:, :, 0:total_params]
+        X = ortho_group.rvs(num_of_samples, num_of_batches, random_state=random_state)\
+                                                .transpose((0, 2, 1))[:, :, 0:total_params]
 
     X_1 = X[:, :, 0:params_block_one]
     # Adding linear combinations
@@ -90,10 +99,23 @@ def orthogonal_data(num_of_samples = 11, params_block_one = 4, params_block_two 
     X_3_complete = np.concatenate((X_3, X_3_linear_comb), -1)
 
     # Constructing Y block
-    y1 = np.einsum('j,klj->kl', lin_vec_1, X[:, :, 0:total_params])
-    y2 = np.einsum('j,klj->kl', lin_vec_2, X[:, :, 0:total_params])
-    Y = np.stack((y1, y2), -1)
+    y1 = np.einsum('j,klj->kl', lin_vec_2[0:params_block_one], X[:, :, 0:params_block_one])
+    y2 = np.einsum('j,klj->kl', lin_vec_2[params_block_one:params_block_one+params_block_two],
+                   X[:, :, params_block_one:params_block_one+params_block_two])
+    y3 = np.einsum('j,klj->kl', lin_vec_2[params_block_one+params_block_two:total_params],
+                   X[:, :, params_block_one+params_block_two:total_params])
+    Y = np.stack((y1, y2, y3), -1)
     if num_of_batches == 1:
         return np.squeeze(X_1_complete), np.squeeze(X_2_complete), np.squeeze(X_3_complete), np.squeeze(Y)
     else:
         return X_1_complete, X_2_complete, X_3_complete, Y
+
+def add_noise(data, snr):
+    assert(snr>0), "The signal-to-noise-ration has to be higher than 0"
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    scaler.fit(data)
+    snr_inverse = 1 / snr
+    noise = np.random.randn(data.shape[0], data.shape[1]) * snr_inverse
+    data = data + noise * scaler.scale_
+    return data
