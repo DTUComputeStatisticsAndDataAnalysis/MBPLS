@@ -18,46 +18,124 @@ __all__ = ['MBPLS']
 
 
 class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
-    # TODO: Write a bit about the models used in help
-    """Multiblock PLS regression
-
-        - super scores are normalized to length 1 (not done in R package ade4)
-        - N > P run SVD(X'YY'X) --> PxP matrix
-        - N < P run SVD(XX'YY') --> NxN matrix (Lindgreen et al. 1998)
-
+    """(Multiblock) PLS regression for predictive modelling using latent variables
+        --------------------------------------------------------------------------
+        
+        - **PLS1**: Predict a response vector :math:`y` from a single multivariate data block :math:`X`
+        - **PLS2**: Predict a response matrix :math:`Y` from a single multivariate data block :math:`X`
+        - **MBPLS**: Predict a response vector/matrix :math:`Y` from multiple data blocks :math:`X_1, X_2, ... , X_i`
+        
+        
+        
+        for detailed information check [ref]
+        
+        
         Model settings
-        ----------
+        --------------
 
         method : string (default 'NIPALS')
-        The method being used to derive the model attributes, possible are 'UNIPALS', 'NIPALS', 'SIMPLS'
+            The method being used to derive the model attributes, possible are 'UNIPALS', 'NIPALS', 'SIMPLS' and 'KERNEL'
 
         n_components : int
-        Number of Latent Variables.
+            Number (:math:`k`) of Latent Variables (LV)
 
         standardize : bool (default True)
-        Standardizing the data
+            Standardizing the data
 
         full_svd : bool (default True)
-        Using full singular value decomposition when performing SVD method
+            Using full singular value decomposition when performing SVD method. 
+            Set to 'False' when using very large quadratic matrices :math:`X`.
 
         max_tol : non-negative float (default 1e-14)
-        Maximum tolerance allowed when using the iterative NIPALS algorithm
-
+            Maximum tolerance allowed when using the iterative NIPALS algorithm
+            
+        
         Model attributes after fitting
-        ----------
-        X side:
-        Ts_ - super scores
-        T_ - list of block scores (number of elements = number of blocks)
-        W_ - list of block loadings (number of elements = number of blocks)
-        A_ - super weights/loadings (number of rows = number of blocks)
-        eigenv - normal PLS weights (of length 1)
-        weights - concatenated eigenv's
-        P_ - Loadings
+        ------------------------------
 
-        Y side:
-        U_ - scores on Y
-        V_ - loadings on Y y_loading_
+        **X-side** 
 
+        Ts_ : array, super scores :math:`[n,k]`
+        
+        T_ : list, block scores :math:`[i][n,k]`
+        
+        W_ : list, block weights :math:`[i][p_i,k]`
+        
+        A_ : array, block importances/super weights :math:`[i,k]`
+        
+        A_corrected_ : array, normalized block importances :math:`A_{corr,ik} = A_{ik} \\cdot (1- \\frac{p_i}{p})`
+        
+        P_ : list, block loadings :math:`[i][p_i,k]`
+        
+        R_ : array, x_rotations :math:`R = W (P^T W)^{-1}`
+        
+        explained_var_x_ : list, explained variance in :math:`X` per LV :math:`[k]`
+        
+        explained_var_xblocks_ : array, explained variance in each block :math:`X_i` :math:`[i,k]`
+        
+        beta_ : array, regression vector :math:`\\beta`  :math:`[p,q]`
+        
+
+        **Y-side**
+        
+        U_ : array, scores :math:`[n,k]`
+        
+        V_ : array, loadings :math:`[q,k]`
+        
+        explained_var_y_ : list, explained variance in :math:`Y` :math:`[k]`
+        
+        
+
+        Notes
+        -----
+        
+        According to literature one distinguishes between PLS1 [ref], PLS2 [ref] and MBPLS [ref].
+        Common goal is to find loading vectors :math:`p` and :math:`v` which project the data to latent variable scores :math:`ts` and :math:`u` 
+        indicating maximal covariance. Subsequently, the explained variance is deflated and further LVs can be extracted.
+        Deflation for the :math:`k`-th LV is obtained as:
+           
+        
+        .. math::
+            
+            X_k = X_{k-1} - t_k p_k^T
+            
+        
+        **PLS1**: Matrices are computed such that:
+            
+        .. math::
+                        
+            X &= T_s P^T + E_X
+            
+            y &= X \\beta + e
+        
+        **PLS2**: Matrices are computed such that:
+            
+        .. math::
+            
+            X &= T_s P^T + E_X
+            
+            Y &= U V^T + E_Y
+            
+            Y &= X \\beta + E
+            
+        **MBPLS**: In addition, MBPLS provides a measure for how important (:math:`A`) each block :math:`X_i` is 
+        for prediction of :math:`Y` in each LV. Matrices are computed such that:
+        
+        .. math::
+            
+            X &= [X_1|X_2|...|X_i]
+            
+            X_i &= T_s P_i^T + E_i
+            
+            Y &= U V^T + E_Y
+            
+            A_{ik} &= ||w_{ik}||_2^2
+            
+            Y &= X \\beta + E
+               
+        
+        Examples
+        --------
     """
 
     def __init__(self, n_components=2, full_svd=False, method='NIPALS', standardize=True, max_tol=1e-14, calc_all=True):
@@ -121,7 +199,6 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             self.T_ = []
         self.explained_var_xblocks_ = np.empty((self.num_blocks_, 0))
         self.V_ = np.empty((Y.shape[1], 0))
-        self.loading_y_ = np.empty((Y.shape[1], 0))
         self.U_ = np.empty((Y.shape[0], 0))
         self.Ts_ = np.empty((Y.shape[0], 0))
         self.explained_var_y_ = []

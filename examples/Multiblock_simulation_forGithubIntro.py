@@ -64,6 +64,6 @@ mbpls_model.plot([2])
 
 # Scatter BLock scores versus y
 fig, ax = plt.subplots(nrows=1, ncols=2)
-ax[0].scatter(y[:,0], mbpls_model.T[0][:,0]); ax[0].set_xlabel('y1'); ax[0].set_ylabel('Block Scores x1 LV1')
-ax[1].scatter(y[:,1], mbpls_model.T[1][:,1]); ax[1].set_xlabel('y2'); ax[1].set_ylabel('Block Scores x2 LV2')
+ax[0].scatter(y[:,0], mbpls_model.T_[0][:,0]); ax[0].set_xlabel('y1'); ax[0].set_ylabel('Block Scores x1 LV1')
+ax[1].scatter(y[:,1], mbpls_model.T_[1][:,1]); ax[1].set_xlabel('y2'); ax[1].set_ylabel('Block Scores x2 LV2')
 plt.show()
