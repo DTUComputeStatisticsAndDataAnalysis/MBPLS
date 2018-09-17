@@ -118,8 +118,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             
             Y &= X \\beta + E
             
-        **MBPLS**: In addition, MBPLS provides a measure for how important (:math:`A_{ik}`) each block :math:`X_i` is 
-        for prediction of :math:`Y` in LV :math:`k`. Matrices are computed such that:
+        **MBPLS**: In addition, MBPLS provides a measure for how important (:math:`a_{ik}`) each block :math:`X_i` is 
+        for prediction of :math:`Y` in the :math:`k`-th LV. Matrices are computed such that:
         
         .. math::
             
@@ -129,7 +129,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             
             Y &= U V^T + E_Y
             
-            A_{ik} &= ||w_{ik}||_2^2
+            a_{ik} &= ||w_{ik}||_2^2
             
             Y &= X \\beta + E
                
