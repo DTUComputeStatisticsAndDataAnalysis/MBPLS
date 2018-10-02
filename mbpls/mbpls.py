@@ -309,7 +309,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         self.W_[block] = np.hstack((self.W_[block], w[block]))
                         self.T_[block] = np.hstack((self.T_[block], t[block]))
                     self.R_ = weights.dot(np.linalg.pinv(self.P_.T.dot(weights)))
-                    self.beta = self.R_.dot(self.V_.T)
+                    self.beta_ = self.R_.dot(self.V_.T)
                 # restore blockwise loadings
                 self.P_ = np.split(self.P_, [index[1] for index in feature_indices])[:-1]
 
