@@ -956,7 +956,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     X[block] = self.x_scalers_[block].transform(X[block])
             else:
                 X = check_array(X, dtype=np.float64)
-                X = [self.x_scalers_[0].fit_transform(X)]
+                X = [self.x_scalers_[0].transform(X)]
 
 
             X = np.hstack(X)
@@ -965,7 +965,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             X = np.hstack(X)
             y_hat = X.dot(self.beta_)
 
-        return y_hat.squeeze()
+        return y_hat
 
     def fit_transform(self, X, y=None, **fit_params):
         """Fit the model and then, then transform the given data to lower dimensions.
