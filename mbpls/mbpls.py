@@ -1031,8 +1031,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
         # Iterate over all required components
         for comp in num_components:
-            #fig = plt.figure()
-            plt.suptitle("Component {:d}".format(comp + 1), fontsize=14, fontweight='bold')
+            plt.figure()
+            plt.suptitle("Component {}: {} % expl. var. in Y".format(comp+1, 100*self.explained_var_y_[comp].round(4)), fontsize=14, fontweight='bold')
 
             gs1 = GridSpec(1, self.num_blocks_, top=0.875, bottom=0.85, right=0.95)
             for block in range(self.num_blocks_):
@@ -1101,6 +1101,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
             plt.show()
 
+        plt.figure()
         plt.suptitle("Block importances", fontsize=14, fontweight='bold')
         gs3 = GridSpec(1, 1, top=0.825, right=0.7, hspace=0.45, wspace=0.4)
         ax = plt.subplot(gs3[0, 0])
