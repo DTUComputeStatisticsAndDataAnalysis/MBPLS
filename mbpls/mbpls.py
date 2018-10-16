@@ -1032,7 +1032,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         # Iterate over all required components
         for comp in num_components:
             plt.figure()
-            plt.suptitle("Component {}: {} % expl. var. in Y".format(comp+1, 100*self.explained_var_y_[comp].round(4)), fontsize=14, fontweight='bold')
+            plt.suptitle("Component {}: {} % expl. var. in Y".format(comp+1, 100*self.explained_var_y_[comp].round(4)), fontsize=12, fontweight='bold')
 
             gs1 = GridSpec(1, self.num_blocks_, top=0.875, bottom=0.85, right=0.95)
             for block in range(self.num_blocks_):
