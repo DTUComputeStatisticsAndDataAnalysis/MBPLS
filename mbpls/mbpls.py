@@ -1032,12 +1032,13 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         # Iterate over all required components
         for comp in num_components:
             plt.figure()
-            plt.suptitle("Component {}: {} % expl. var. in Y".format(comp+1, 100*self.explained_var_y_[comp].round(4)), fontsize=12, fontweight='bold')
+            plt.suptitle("Component {}: {}% expl. var. in Y".format(comp+1, (100*self.explained_var_y_[comp]).round(2)), 
+                         fontsize=12, fontweight='bold')
 
             gs1 = GridSpec(1, self.num_blocks_, top=0.875, bottom=0.85, right=0.95)
             for block in range(self.num_blocks_):
                 plt.subplot(gs1[0, block])
-                plt.text(0.5, 0.5, "X-Block {:d}\nImportance: {:.0f}%".format(block + 1, self.A_[block, comp] * 100),
+                plt.text(0.5, 0, "X-Block {:d}\nImportance: {:.0f}%".format(block + 1, self.A_[block, comp] * 100),
                          fontsize=12, horizontalalignment='center')
                 plt.axis('off')
 
@@ -1067,7 +1068,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                                np.arange(1, W_inv_trans[block].shape[0] + 1, step))
                     # loading_axes[block].yaxis.set_major_formatter(ticker.FormatStrFormatter('%4.2f'))
                     plt.grid()
-                    plt.ylabel("Loading")
+                    plt.ylabel("Block Loading")
                     plt.xlabel("Variable")
 
                     # Scores
@@ -1076,7 +1077,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     step = int(self.T_[block].shape[0] / 4)
                     plt.xticks(np.arange(0, self.T_[block].shape[0], step),
                                np.arange(1, self.T_[block].shape[0] + 1, step))
-                    plt.ylabel("Score")
+                    plt.ylabel("Block Score")
                     plt.xlabel("Sample")
                     plt.grid()
                 else:
@@ -1098,7 +1099,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     # plt.setp(score_axes[block].get_yticklabels(), visible=False)
                     plt.xlabel("Sample")
                     plt.grid()
-
+                    
             plt.show()
 
         plt.figure()
