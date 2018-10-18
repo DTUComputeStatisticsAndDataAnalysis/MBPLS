@@ -78,7 +78,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
         **Y-side**
         
-        U_ : array, scores :math:`[n,k]`
+        U_ : array, scoresInitialize :math:`[n,k]`
         
         V_ : array, loadings :math:`[q,k]`
         
@@ -136,6 +136,26 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         
         Examples
         --------
+        
+        Quick Start: Two random data blocks :math:`X_1` and :math:`X_2` and a random reference vector :math:`y` for predictive modeling.
+        
+        .. code-block:: python
+        
+            import numpy as np
+            from mbpls.mbpls import MBPLS
+            
+            mbpls = MBPLS(n_components=4)
+            x1 = np.random.rand(20,300)
+            x2 = np.random.rand(20,450)
+            
+            y = np.random.rand(20,1)
+            
+            mbpls.fit([x1, x2],y)
+            mbpls.plot(num_components=4)
+            
+            y_pred = mbpls.predict([x1, x2])
+            
+        More elaborate examples can be found at https://github.com/b0nsaii/MBPLS
     """
 
     def __init__(self, n_components=2, full_svd=False, method='NIPALS', standardize=True, max_tol=1e-14, calc_all=True):
