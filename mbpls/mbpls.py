@@ -213,7 +213,6 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         # Concatenate X blocks
         X = np.hstack(X)
         self.P_ = np.empty((X.shape[1], 0))
-        #self.W_concat_ = np.empty((X.shape[1], 0))
         weights = np.empty((X.shape[1], 0))
 
         if self.method == 'UNIPALS':
@@ -234,7 +233,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     else:
                         eigenv = svds(S, k=1)[0]
 
-                    # 3. Calculate block loadings w1, w2, ... , superweights a1, a2, ...
+                    # 3. Calculate block weights w1, w2, ... , superweights a1, a2, ...
                     w = []
                     a = []
                     for indices, block in zip(feature_indices, range(self.num_blocks_)):
@@ -282,7 +281,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     vary = (Y ** 2).sum()
                     self.explained_var_y_.append(vary_explained / vary)
 
-                    # 10. Upweight Block Importances of blocks with less features
+                    # 10. Correct block importance for number of features in blocks
                     sum_vars = []
                     for vector in w:
                         sum_vars.append(len(vector))
@@ -338,7 +337,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     eigenv = X.T.dot(u)
                     eigenv = eigenv / np.linalg.norm(eigenv)
 
-                    # 6. Calculate block loadings w1, w2, ... , superweights a1, a2, ...
+                    # 6. Calculate block weights w1, w2, ... , superweights a1, a2, ...
                     w = []
                     a = []
                     for indices, block in zip(feature_indices, range(self.num_blocks_)):
@@ -374,7 +373,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     vary = (Y ** 2).sum()
                     self.explained_var_y_.append(vary_explained / vary)
 
-                    # 10. Upweight Block Importances of blocks with less features (provided as additional figure of merit)
+                    # 10. Correct block importance for number of features in blocks
                     sum_vars = []
                     for vector in w:
                         sum_vars.append(len(vector))
@@ -433,7 +432,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     p = eigenv.T.dot(VAR) / eigenv.T.dot(VAR).dot(eigenv)
 
                     if self.calc_all:
-                        # 3. Calculate block loadings w1, w2, ... , superweights a1, a2, ...
+                        # 3. Calculate block weights w1, w2, ... , superweights a1, a2, ...
                         w = []
                         a = []
                         for indices, block in zip(feature_indices, range(self.num_blocks_)):
@@ -1045,30 +1044,25 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             gs2 = GridSpec(2, self.num_blocks_, top=0.8, hspace=0.45, wspace=0.45, right=0.95)
             loading_axes = []
             score_axes = []
-            # List for inverse transforming the loadings/weights
-            W_inv_trans = []
+            # List for inverse transforming the loadings
+            P_inv_trans = []
             for block in range(self.num_blocks_):
                 # Inverse transforming weights/loadings
-                # TODO: Does this make sense?
-                # IDEA: Use loadings instead of weights
                 if self.standardize:
-                    W_inv_trans.append(self.x_scalers_[block].inverse_transform(self.W_[block][:, comp]))
-                    #W_inv_trans.append(self.W_[block][:, comp])
+                    P_inv_trans.append(self.x_scalers_[block].inverse_transform(self.P_[block][:, comp]))
                 else:
-                    W_inv_trans.append(self.W_[block][:, comp])
-                #W_inv_trans.append(self.P_[block][:, comp])
-
+                    P_inv_trans.append(self.P_[block][:, comp])
 
                 if len(loading_axes) == 0:
                     # Loadings
                     loading_axes.append(plt.subplot(gs2[0, block]))
-                    plt.plot(W_inv_trans[block])
-                    step = int(W_inv_trans[block].shape[0] / 4)
-                    plt.xticks(np.arange(0, W_inv_trans[block].shape[0], step),
-                               np.arange(1, W_inv_trans[block].shape[0] + 1, step))
+                    plt.plot(P_inv_trans[block])
+                    step = int(P_inv_trans[block].shape[0] / 4)
+                    plt.xticks(np.arange(0, P_inv_trans[block].shape[0], step),
+                               np.arange(1, P_inv_trans[block].shape[0] + 1, step))
                     # loading_axes[block].yaxis.set_major_formatter(ticker.FormatStrFormatter('%4.2f'))
                     plt.grid()
-                    plt.ylabel("Block Loading")
+                    plt.ylabel("Loading")
                     plt.xlabel("Variable")
 
                     # Scores
@@ -1083,10 +1077,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                 else:
                     # Loadings
                     loading_axes.append(plt.subplot(gs2[0, block]))
-                    plt.plot(W_inv_trans[block])
-                    step = int(W_inv_trans[block].shape[0] / 4)
-                    plt.xticks(np.arange(0, W_inv_trans[block].shape[0], step),
-                               np.arange(1, W_inv_trans[block].shape[0] + 1, step))
+                    plt.plot(P_inv_trans[block])
+                    step = int(P_inv_trans[block].shape[0] / 4)
+                    plt.xticks(np.arange(0, P_inv_trans[block].shape[0], step),
+                               np.arange(1, P_inv_trans[block].shape[0] + 1, step))
                     # plt.setp(loading_axes[block].get_yticklabels(), visible=False)
                     plt.xlabel("Variable")
                     plt.grid()
