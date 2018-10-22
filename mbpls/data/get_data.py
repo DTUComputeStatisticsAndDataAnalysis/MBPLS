@@ -13,20 +13,42 @@ import numpy as np
 from scipy.stats import ortho_group
 
 all = ['data_path',
-       'orthogonal_data']
+       'orthogonal_data',
+       'load_Intro_Data',
+       'load_FTIR_Data',
+       'load_CarbohydrateMicroarrays_Data']
 
 def data_path():
     path = os.path.dirname(os.path.abspath(__file__))
     return path
 
-def load_MBdata():
-    from scipy.io import loadmat
-    data = loadmat(os.path.join(data_path(), 'MBdata.mat'))
-    y = data['Y']
-    x = data['X']
-    return x, y
 
-def orthogonal_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, params_block_three = 4, \
+def load_Intro_Data():
+    import pandas as pd
+    file_dict = {}
+    for file in os.listdir(os.path.join(data_path(), 'MBPLS_intro')):
+        file_dict[file.replace('.pkl', '')] = pd.read_pickle(os.path.join(data_path(), 'MBPLS_intro', file))
+    print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
+    return file_dict
+
+
+def load_FTIR_Data():
+    import pandas as pd
+    file_dict = {}
+    for file in os.listdir(os.path.join(data_path(), 'FTIR')):
+        file_dict[file.replace('.pkl', '')] = pd.read_pickle(os.path.join(data_path(), 'FTIR', file))
+    print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
+    return file_dict
+
+def load_CarbohydrateMicroarrays_Data():
+    import pandas as pd
+    file_dict = {}
+    for file in os.listdir(os.path.join(data_path(), 'CarbohydrateMicroarrays')):
+        file_dict[file.replace('.pkl', '')] = pd.read_pickle(os.path.join(data_path(), 'CarbohydrateMicroarrays', file))
+    print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
+    return file_dict
+
+def orthogonal_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, params_block_three = 4,
                     num_of_variables_main_lin_comb = 0, num_of_batches = 1, random_state=None):
     """This function creates a dataset with three X-blocks, which are completely orthogonal
     amongst each other and one Y-block, that has two response variables, which are a linear combination of
