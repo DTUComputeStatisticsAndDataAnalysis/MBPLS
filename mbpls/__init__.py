@@ -12,4 +12,4 @@ from . import mbpls, data
 
 __all__ = ["mbpls", "data"]
 
-__version__ = "0.0.1"
+__version__ = "1.0.0a1"
