@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Jan 15 14:31:48 2018
+#
+# Author:   Andreas Baum <andba@dtu.dk>
+#           Laurent Vermue <lauve@dtu.dk>
+#
+# License: 3-clause BSD
 
-@authors: Andreas Baum, andba@dtu.dk; Laurent Vermue, lauve@dtu.dk
-
-"""
 
 from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted, check_consistent_length
@@ -247,7 +247,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         Xblocks.append(X[:, indices[0]:indices[1]])
 
                     # 2. Calculate eigenv (normal pls weights) by SVD(X'YY'X) --> eigenvector with largest eigenvalue
-                    S = X.T.dot(Y).dot(Y.T).dot(X)
+                    # TODO: Possible error, problems are not identified in Test scripts
+                    S = np.linalg.multi_dot([X.T, Y, Y.T, X])
                     if self.full_svd:
                         eigenv = np.linalg.svd(S, full_matrices=self.full_svd)[0][:, 0:1]
                     else:
@@ -340,7 +341,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         Xblocks.append(X[:, indices[0]:indices[1]])
 
                     # 2. Calculate ts by SVD(XX'YY') --> eigenvector with largest eigenvalue
-                    S = X.dot(X.T).dot(Y).dot(Y.T)
+                    S = np.linalg.multi_dot([X, X.T, Y, Y.T])
                     if self.full_svd:
                         ts = np.linalg.svd(S, full_matrices=self.full_svd)[0][:, 0:1]
                     else:
@@ -435,7 +436,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                 # Based on [1] F. Lindgren, P. Geladi, and S. Wold, “The kernel algorithm for PLS,” J. Chemom.,
                 # vol. 7, no. 1, pp. 45–59, Jan. 1993.
                 # Calculate kernel matrix once
-                S = X.T.dot(Y).dot(Y.T).dot(X)
+                # TODO: Possible errors in this section are not identified by the test scripts
+                S = np.linalg.multi_dot([X.T, Y, Y.T, X])
                 # Calculate variance covariance matrixes
                 VAR = X.T.dot(X)
                 COVAR = X.T.dot(Y)
@@ -446,10 +448,11 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         eigenv = svds(S, k=1)[0]
 
                     # 6. Calculate v (Y-loading) by projection of ts on Y
-                    v = eigenv.T.dot(COVAR) / eigenv.T.dot(VAR).dot(eigenv)
+                    denominator = np.linalg.multi_dot([eigenv.T, VAR, eigenv])
+                    v = eigenv.T.dot(COVAR) / denominator
 
                     # 8. Deflate X and calculate explained variance in Xtotal; X1, X2, ... Xk
-                    p = eigenv.T.dot(VAR) / eigenv.T.dot(VAR).dot(eigenv)
+                    p = eigenv.T.dot(VAR) / denominator
 
                     if self.calc_all:
                         # 3. Calculate block weights w1, w2, ... , superweights a1, a2, ...
@@ -481,8 +484,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
                     # Update kernel and variance/covariance matrices
                     deflate_matrix = np.eye(S.shape[0]) - eigenv.dot(p)
-                    S = deflate_matrix.T.dot(S).dot(deflate_matrix)
-                    VAR = deflate_matrix.T.dot(VAR).dot(deflate_matrix)
+                    S = np.linalg.multi_dot([deflate_matrix.T, S, deflate_matrix])
+                    VAR = np.linalg.multi_dot([deflate_matrix.T, VAR, deflate_matrix])
                     COVAR = deflate_matrix.T.dot(COVAR)
 
 
@@ -571,8 +574,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
                     # Deflate association and kernel matrices
                     deflate_matrix = np.eye(S.shape[0], S.shape[0])-ts.dot(ts.T)
-                    AS_X = deflate_matrix.dot(AS_X).dot(deflate_matrix)
-                    AS_Y = deflate_matrix.dot(AS_Y).dot(deflate_matrix)
+                    AS_X = np.linalg.multi_dot([deflate_matrix, AS_X, deflate_matrix])
+                    AS_Y = np.linalg.multi_dot([deflate_matrix, AS_Y, deflate_matrix])
                     S = AS_X.dot(AS_Y)
 
                     # 11. add t, w, u, v, ts, eigenv, loading and a to T_, W_, U_, V_, Ts_, weights, P_ and A_
@@ -582,8 +585,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                 self.W_concat_ = X.T.dot(self.U_)
                 # Normalize weights to length one per column
                 self.W_concat_ = self.W_concat_ / np.linalg.norm(self.W_concat_, axis=0)
-                self.P_ = (X.T.dot(self.Ts_)).dot(np.linalg.pinv(self.Ts_.T.dot(self.Ts_)))
-                self.V_ = (Y.T.dot(self.Ts_)).dot(np.linalg.pinv(self.Ts_.T.dot(self.Ts_)))
+                self.P_ = np.linalg.multi_dot([X.T, self.Ts_, np.linalg.pinv(self.Ts_.T.dot(self.Ts_))])
+                self.V_ = np.linalg.multi_dot([Y.T, self.Ts_, np.linalg.pinv(self.Ts_.T.dot(self.Ts_))])
 
                 self.R_ = self.W_concat_.dot(np.linalg.pinv(self.P_.T.dot(self.W_concat_)))
                 self.beta_ = self.R_.dot(self.V_.T)
@@ -797,10 +800,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                 u = Y.dot(q)
                 v = p
                 if comp > 0:
-                    v = v - V_.dot(V_.T.dot(p))
-                    u = u - T_.dot(T_.T.dot(u))
+                    v = v - np.linalg.multi_dot([V_, V_.T, p])
+                    u = u - np.linalg.multi_dot([T_, T_.T, u])
                 v = v / np.sqrt(v.T.dot(v))
-                S = S - v.dot(v.T.dot(S))
+                S = S - np.linalg.multi_dot([v, v.T, S])
 
                 if comp == 0:
                     R_ = r

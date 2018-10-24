@@ -1,9 +1,14 @@
 """
-21.08.18 Andreas Baum, andba@dtu.dk
-
-Script to test if all algorithms perform as intended
-
+Script to test if all algorithms perform as intended using pytest
 """
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Author:   Andreas Baum <andba@dtu.dk>
+#           Laurent Vermue <lauve@dtu.dk>
+#
+# License: 3-clause BSD
+
 # define Parameters
 rand_seed = 25
 num_samples = 50

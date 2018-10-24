@@ -2,8 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# author: Laurent Vermue
-# author_email: lauve@dtu.dk
+# Author: Laurent Vermue <lauve@dtu.dk>
 #
 #
 # License: 3-clause BSD
