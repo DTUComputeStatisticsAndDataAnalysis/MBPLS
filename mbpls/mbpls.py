@@ -233,6 +233,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         # Concatenate X blocks
         X = np.hstack(X)
         self.P_ = np.empty((X.shape[1], 0))
+        self.W_concat_ = np.empty((X.shape[1], 0))
         weights = np.empty((X.shape[1], 0))
 
         if self.method == 'UNIPALS':
