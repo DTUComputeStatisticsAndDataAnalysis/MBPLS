@@ -10,6 +10,10 @@
 import os
 import numpy as np
 from scipy.stats import ortho_group
+from urllib.request import urlretrieve
+import pandas as pd
+import time
+import sys
 
 all = ['data_path',
        'orthogonal_data',
@@ -23,29 +27,78 @@ def data_path():
 
 
 def load_Intro_Data():
-    import pandas as pd
-    file_dict = {}
-    for file in os.listdir(os.path.join(data_path(), 'MBPLS_intro')):
-        file_dict[file.replace('.pkl', '')] = pd.read_pickle(os.path.join(data_path(), 'MBPLS_intro', file))
+    file_dict = {'extraction1': [], 'extraction2': [], 'extraction3': [],
+                 'ftir1': [], 'ftir2': [], 'ftir3': []}
+    dir = 'MBPLS_intro'
+    file_path = os.path.join(data_path(), dir)
+    for file in file_dict.keys():
+        abs_file_path = os.path.join(file_path, '{0}.pkl'.format(file))
+        if file_checker(file, abs_file_path, dir) == 0:
+            file_dict[file] = pd.read_pickle(abs_file_path)
+        else:
+            print('File {0} was not available and could not be downloaded'.format(file))
+
     print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
     return file_dict
 
 
 def load_FTIR_Data():
-    import pandas as pd
-    file_dict = {}
-    for file in os.listdir(os.path.join(data_path(), 'FTIR')):
-        file_dict[file.replace('.pkl', '')] = pd.read_pickle(os.path.join(data_path(), 'FTIR', file))
+    file_dict = {'ftir1': [], 'ftir2': [], 'ftir3': []}
+    dir = 'FTIR'
+    file_path = os.path.join(data_path(), dir)
+    for file in file_dict.keys():
+        abs_file_path = os.path.join(file_path, '{0}.pkl'.format(file))
+        if file_checker(file, abs_file_path, dir) == 0:
+            file_dict[file] = pd.read_pickle(abs_file_path)
+        else:
+            print('File {0} was not available and could not be downloaded'.format(file))
+
     print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
     return file_dict
 
 def load_CarbohydrateMicroarrays_Data():
-    import pandas as pd
-    file_dict = {}
-    for file in os.listdir(os.path.join(data_path(), 'CarbohydrateMicroarrays')):
-        file_dict[file.replace('.pkl', '')] = pd.read_pickle(os.path.join(data_path(), 'CarbohydrateMicroarrays', file))
+    file_dict = {'extraction1': [], 'extraction2': [], 'extraction3': []}
+    dir = 'CarbohydrateMicroarrays'
+    file_path = os.path.join(data_path(), dir)
+    for file in file_dict.keys():
+        abs_file_path = os.path.join(file_path, '{0}.pkl'.format(file))
+        if file_checker(file, abs_file_path, dir) == 0:
+            file_dict[file] = pd.read_pickle(abs_file_path)
+        else:
+            print('File {0} was not available and could not be downloaded'.format(file))
+
     print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
     return file_dict
+
+def file_checker(file, abs_file_path, dir):
+    if os.path.isfile(abs_file_path):
+        pass
+    else: #Download the file from the github repository
+        url = 'https://github.com/b0nsaii/MBPLS/raw/Package_OOP/mbpls/data/{0}/{1}.pkl'.format(
+                    dir, file)
+        print('File not available locally. Trying to download file {0} from github repository.\n Link: {1}'
+              .format(file, url))
+        try:
+            urlretrieve(url, abs_file_path, reporthook)
+        except:
+            print("The file could not be downloaded. Please check your internet connection.")
+            return 1
+    return 0
+
+
+# From https://blog.shichao.io/2012/10/04/progress_speed_indicator_for_urlretrieve_in_python.html
+def reporthook(count, block_size, total_size):
+    global start_time
+    if count == 0:
+        start_time = time.time()
+        return
+    duration = time.time() - start_time
+    progress_size = int(count * block_size)
+    speed = int(progress_size / (1024 * duration))
+    percent = min(int(count*block_size*100/total_size), 100)
+    sys.stdout.write("\r...%d%%, %d MB, %d KB/s, %d seconds passed\n" %
+                    (percent, progress_size / (1024 * 1024), speed, duration))
+    sys.stdout.flush()
 
 def orthogonal_data(num_of_samples = 11, params_block_one = 4, params_block_two = 4, params_block_three = 4,
                     num_of_variables_main_lin_comb = 0, num_of_batches = 1, random_state=None):
