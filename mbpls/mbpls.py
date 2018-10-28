@@ -13,6 +13,7 @@ from sklearn import metrics
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from scipy.sparse.linalg import svds
+from warnings import warn
 
 __all__ = ['MBPLS']
 
@@ -48,7 +49,17 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
         max_tol : non-negative float (default 1e-14)
             Maximum tolerance allowed when using the iterative NIPALS algorithm
-            
+
+        calc_all : bool (default True)
+            Calculate all internal attributes for the used method. Some methods do not need to calculate all attributes,
+            i.e. scores, weights etc., to obtain the regression coefficients used for prediction. Setting this parameter
+            to false will omit these calculations for efficiency and speed.
+
+        sparse_data : bool (default False)
+            NIPALS is the only algorithm that can handle sparse data using the method of H. Martens and Martens (2001)
+            (p. 381). If this parameter is set to 'True', the method will be forced to NIPALS and sparse data is allowed.
+            Without setting this parameter to 'True', sparse data will not be accepted.
+
         
         Model attributes after fitting
         ------------------------------
@@ -158,13 +169,33 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         More elaborate examples can be found at https://github.com/b0nsaii/MBPLS
     """
 
-    def __init__(self, n_components=2, full_svd=False, method='NIPALS', standardize=True, max_tol=1e-14, calc_all=True):
+    def __init__(self, n_components=2, full_svd=False, method='NIPALS', standardize=True, max_tol=1e-14, calc_all=True,
+                 sparse_data=False):
         self.n_components = n_components
         self.full_svd = full_svd
         self.method = method
         self.standardize = standardize
         self.max_tol = max_tol
         self.calc_all = calc_all
+        self.sparse_data = sparse_data
+
+    def check_sparsity_level(self, data):
+        total_rows, total_columns = data.shape
+        sparse_columns = np.isnan(data).sum(axis=0)>0
+        sparse_columns_n = sparse_columns.sum()
+        dense_columns = np.where(sparse_columns==0)[0]
+        sparse_columns = np.where(sparse_columns==1)[0]
+        sparse_rows = np.isnan(data).sum(axis=1) > 0
+        sparse_rows_n = sparse_rows.sum()
+        dense_rows = np.where(sparse_rows==0)[0]
+        sparse_rows = np.where(sparse_rows==1)[0]
+        if sparse_columns_n/total_columns > 0.5:
+            warn("The sparsity of your data is likely to high for this algorithm. This can cause either convergence"
+                 "problems or crash the algorithm.")
+        if sparse_rows_n/total_rows > 0.5:
+            warn("The sparsity of your data is likely to high for this algorithm. This can cause either convergence"
+                 "problems or crash the algorithm.")
+        return sparse_rows, sparse_columns, dense_rows, dense_columns
 
     def fit(self, X, Y):
         """ Fit model to given data
@@ -178,23 +209,40 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             1-dim or 2-dim array of reference values
         """
 
+        # In case of sparse data, check if chosen method is suitable
+        if self.sparse_data is True:
+            if self.method != 'NIPALS':
+                warn("The parameter sparse data was set to 'True', but the chosen method is not 'NIPALS'."
+                     "The method will be set to 'NIPALS'")
+                self.method = 'NIPALS'
+
         global U_, T_, R_
-        Y = check_array(Y, dtype=np.float64, ensure_2d=False)
+        Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data)
+        if self.sparse_data is True:
+            self.sparse_Y_info_ = {}
+            self.sparse_Y_info_['Y'] = self.check_sparsity_level(Y)
         if Y.ndim == 1:
             Y = Y.reshape(-1, 1)
         if self.standardize:
             self.x_scalers_ = []
             if isinstance(X, list) and not isinstance(X[0], list):
+                if self.sparse_data is True:
+                    self.sparse_X_info_ = {}
                 for block in range(len(X)):
                     self.x_scalers_.append(StandardScaler(with_mean=True, with_std=True))
                     # Check dimensions
                     check_consistent_length(X[block], Y)
-                    X[block] = check_array(X[block], dtype=np.float64, copy=True)
+                    X[block] = check_array(X[block], dtype=np.float64, copy=True, force_all_finite=not self.sparse_data)
+                    if self.sparse_data is True:
+                        self.sparse_X_info_[block] = self.check_sparsity_level(X[block])
                     X[block] = self.x_scalers_[block].fit_transform(X[block])
             else:
                 self.x_scalers_.append(StandardScaler(with_mean=True, with_std=True))
                 # Check dimensions
-                X = check_array(X, dtype=np.float64, copy=True)
+                X = check_array(X, dtype=np.float64, copy=True, force_all_finite=not self.sparse_data)
+                if self.sparse_data is True:
+                    self.sparse_X_info_ = {}
+                    self.sparse_X_info_[0] = self.check_sparsity_level(X)
                 check_consistent_length(X, Y)
                 X = [self.x_scalers_[0].fit_transform(X)]
 
@@ -202,6 +250,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             Y = self.y_scaler_.fit_transform(Y)
 
         self.num_blocks_ = len(X)
+
 
         # Store start/end feature indices for all x blocks
         feature_indices = []
@@ -662,6 +711,9 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             return self
 
         elif self.method == 'NIPALS':
+            # In case of sparse data, calculations are based on the algorithm of
+            # H. Martens and Martens (2001) (p. 381)
+            #
             # Restore X blocks (for each deflation step)
             Xblocks = []
             for indices in feature_indices:
@@ -672,10 +724,20 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                 if self.calc_all:
                     # Save variance of matrices
                     if comp == 0:
-                        varx = (X ** 2).sum()
-                        vary = (Y ** 2).sum()
-                # 0. Take first column vector out of y and regress against each block
-                u_a = Y_calc[:, 0:1]
+                        if self.sparse_data:
+                            varx = np.nansum(X ** 2)
+                            vary = np.nansum(Y ** 2)
+                        else:
+                            varx = (X ** 2).sum()
+                            vary = (Y ** 2).sum()
+                # When the data is sparse, the initial vector is not allowed to be sparse
+                if self.sparse_data:
+                    if len(self.sparse_Y_info_['Y'][1]) == Y_calc.shape[1]:
+                        u_a = np.random.rand(Y_calc.shape[0], 1)
+                    else:
+                        u_a = Y_calc[:, self.sparse_Y_info_['Y'][3][0]:self.sparse_Y_info_['Y'][3][0]+1]
+                else: # 0. Take first column vector out of y and regress against each block
+                    u_a = Y_calc[:, 0:1]
                 run = 1
                 diff_t = 1
                 while diff_t > self.max_tol:  # Condition on error of ts
@@ -683,15 +745,34 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     weights = []
                     weights_non_normal = []
                     for block in range(self.num_blocks_):
-                        weights.append(Xblocks[block].T.dot(u_a) / u_a.T.dot(u_a))
-                        weights_non_normal.append(Xblocks[block].T.dot(u_a) / u_a.T.dot(u_a))
+                        if self.sparse_data:
+                            temp_weights = Xblocks[block].T.dot(u_a) / u_a.T.dot(u_a)
+                            for sparse_column in self.sparse_X_info_[block][1]:
+                                non_sparse_rows = ~np.isnan(Xblocks[block][:,sparse_column])
+                                temp_weights[sparse_column] = \
+                                    Xblocks[block][non_sparse_rows, sparse_column].T.dot(u_a[non_sparse_rows])/\
+                                    u_a[non_sparse_rows].T.dot(u_a[non_sparse_rows])
+                            weights.append(temp_weights)
+                            weights_non_normal.append(temp_weights)
+                        else:
+                            temp_weights = Xblocks[block].T.dot(u_a) / u_a.T.dot(u_a)
+                            weights.append(temp_weights)
+                            weights_non_normal.append(temp_weights)
                         # normalize block weigths
                         weights[block] = weights[block] / np.linalg.norm(weights[block])
                     # 2. Regress block weights against rows of each block
                     scores = []
                     for block in range(self.num_blocks_):
                         # Diverging from Wangen and Kowalski by using regression instead of dividing by number of components
-                        scores.append(Xblocks[block].dot(weights[block]))
+                        if self.sparse_data:
+                            temp_scores = Xblocks[block].dot(weights[block])
+                            for sparse_row in self.sparse_X_info_[block][0]:
+                                non_sparse_columns = ~np.isnan(Xblocks[block][sparse_row,:])
+                                temp_scores[sparse_row] = \
+                                    Xblocks[block][sparse_row, non_sparse_columns].dot(weights[block][non_sparse_columns])
+                            scores.append(temp_scores)
+                        else:
+                            scores.append(Xblocks[block].dot(weights[block]))
                     # 3. Append all block scores in T_
                     T_ = np.hstack((scores))
                     # 4. Regress u_a against block of block scores
@@ -706,17 +787,44 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         diff_t = np.sum(superscores_old - superscores)
                     superscores_old = np.copy(superscores)
                     # 6. Regress superscores agains Y_calc
-                    response_weights = Y_calc.T.dot(superscores) / superscores.T.dot(superscores)
+                    if self.sparse_data:
+                        temp_weights = Y_calc.T.dot(superscores) / superscores.T.dot(superscores)
+                        for sparse_column in self.sparse_Y_info_['Y'][1]:
+                            non_sparse_rows = ~np.isnan(Y_calc[:, sparse_column])
+                            temp_weights[sparse_column] = \
+                                Y_calc[non_sparse_rows, sparse_column].T.dot(superscores[non_sparse_rows]) / \
+                                superscores[non_sparse_rows].T.dot(superscores[non_sparse_rows])
+                        response_weights = temp_weights
+                    else:
+                        response_weights = Y_calc.T.dot(superscores) / superscores.T.dot(superscores)
                     # 7. Regress response_weights against Y
-                    response_scores = Y_calc.dot(response_weights) / response_weights.T.dot(response_weights)
-                    response_scores = response_scores / np.linalg.norm(response_scores)
-                    u_a = response_scores
+                    if self.sparse_data:
+                        temp_scores = Y_calc.dot(response_weights) / response_weights.T.dot(response_weights)
+                        for sparse_row in self.sparse_X_info_[block][0]:
+                            non_sparse_columns = ~np.isnan(Y_calc[sparse_row, :])
+                            temp_scores[sparse_row] = \
+                                Y_calc[sparse_row, non_sparse_columns].dot(response_weights[non_sparse_columns])/ \
+                                response_weights[non_sparse_columns].T.dot(response_weights[non_sparse_columns])
+                        response_scores = temp_scores / np.linalg.norm(temp_scores)
+                        u_a = response_scores
+                    else:
+                        response_scores = Y_calc.dot(response_weights) / response_weights.T.dot(response_weights)
+                        response_scores = response_scores / np.linalg.norm(response_scores)
+                        u_a = response_scores
                     run += 1
 
                 # 8. Calculate loading
                 loadings = [None] * self.num_blocks_
                 for block in range(self.num_blocks_):
-                    loadings[block] = Xblocks[block].T.dot(superscores)
+                    if self.sparse_data:
+                        temp_loadings = Xblocks[block].T.dot(superscores)
+                        for sparse_column in self.sparse_X_info_[block][1]:
+                            non_sparse_rows = ~np.isnan(Xblocks[block][:, sparse_column])
+                            temp_loadings[sparse_column] = \
+                                Xblocks[block][non_sparse_rows, sparse_column].T.dot(superscores[non_sparse_rows])
+                        loadings[block] = temp_loadings
+                    else:
+                        loadings[block] = Xblocks[block].T.dot(superscores)
                 # Concatenate the block-loadings
                 loadings_total = np.vstack(loadings)
 
@@ -730,7 +838,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         varxblocks = []
                     for indices, block in zip(feature_indices, range(self.num_blocks_)):
                         if comp == 0:
-                            varxblocks.append((X[:, indices[0]:indices[1]] ** 2).sum())
+                            if self.sparse_data:
+                                varxblocks.append(np.nansum(X[:, indices[0]:indices[1]] ** 2))
+                            else:
+                                varxblocks.append((X[:, indices[0]:indices[1]] ** 2).sum())
                         varx_explained = (superscores.dot(loadings[block].T) ** 2).sum()
                         varx_blocks_explained.append(varx_explained / varxblocks[block])
                     self.explained_var_xblocks_ = np.hstack(
@@ -780,7 +891,6 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             return self
 
         elif self.method == 'SIMPLS':
-            from warnings import warn
             warn("Method 'SIMPLS' does not calculate A_ and T_!")
             # de Jong 1993
             S = X.T.dot(Y)
@@ -859,23 +969,43 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         """
         check_is_fitted(self, 'beta_')
 
+        if self.sparse_data:
+            sparse_X_info_ = {}
+            sparse_Y_info_ = {}
+
         if self.standardize:
             if isinstance(X, list) and not isinstance(X[0], list):
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64)
+                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data)
+                    if self.sparse_data:
+                        sparse_X_info_[block] = self.check_sparsity_level(X[block])
                     X[block] = self.x_scalers_[block].transform(X[block])
             else:
                 # Check dimensions
-                X = check_array(X, dtype=np.float64)
+                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)
+                if self.sparse_data:
+                    sparse_X_info_[0] = self.check_sparsity_level(X)
                 X = [self.x_scalers_[0].transform(X)]
 
             X_comp = np.hstack(X)
+            if self.sparse_data:
+                sparse_X_info_['comp'] = self.check_sparsity_level(X_comp)
 
-            Ts_ = X_comp.dot(self.R_)
+            if self.sparse_data:
+                temp_Ts = X_comp.dot(self.R_)
+                for sparse_row in sparse_X_info_['comp'][0]:
+                    non_sparse_columns = ~np.isnan(X_comp[sparse_row, :])
+                    temp_Ts[sparse_row] = \
+                        X_comp[sparse_row, non_sparse_columns].dot(self.R_[non_sparse_columns])
+                Ts_ = temp_Ts
+            else:
+                Ts_ = X_comp.dot(self.R_)
 
             if Y is not None:
-                Y = check_array(Y, dtype=np.float64, ensure_2d=False)
+                Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data)
+                if self.sparse_data:
+                    sparse_Y_info_['Y'] = self.check_sparsity_level(Y)
                 if Y.ndim == 1:
                     Y = Y.reshape(-1, 1)
                 Y = self.y_scaler_.transform(Y)
@@ -886,15 +1016,54 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         T_.append(np.empty((X[block].shape[0], 0)))
                         for comp in range(self.n_components):
                             if comp == 0:
-                                T_[block] = X[block].dot(self.W_[block][:, comp:comp+1])
+                                if self.sparse_data:
+                                    temp_scores = X[block].dot(self.W_[block][:, comp:comp+1])
+                                    for sparse_row in sparse_X_info_[block][0]:
+                                        non_sparse_columns = ~np.isnan(X[block][sparse_row, :])
+                                        temp_scores[sparse_row] = \
+                                            X[block][sparse_row, non_sparse_columns].dot(
+                                                self.W_[block][:, comp:comp + 1][non_sparse_columns])
+                                    T_[block] = temp_scores
+                                else:
+                                    T_[block] = X[block].dot(self.W_[block][:, comp:comp+1])
                             else:
                                 # deflate the block
-                                X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
-                                T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp+1])))
-
-                    return Ts_, T_ , Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+                                X[block] = X[block] - Ts_[:, comp - 1:comp].dot(self.P_[block][:, comp - 1:comp].T)
+                                if self.sparse_data:
+                                    temp_scores = X[block].dot(self.W_[block][:, comp:comp + 1])
+                                    for sparse_row in sparse_X_info_[block][0]:
+                                        non_sparse_columns = ~np.isnan(X[block][sparse_row, :])
+                                        temp_scores[sparse_row] = \
+                                            X[block][sparse_row, non_sparse_columns].dot(
+                                                self.W_[block][:, comp:comp + 1][non_sparse_columns])
+                                    T_[block] = np.hstack((T_[block], temp_scores))
+                                else:
+                                    T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp+1])))
+                    #Calculate Y scores
+                    if self.sparse_data:
+                        temp_scores = Y.dot(self.V_)
+                        for sparse_row in sparse_Y_info_['Y'][0]:
+                            non_sparse_columns = ~np.isnan(Y[sparse_row, :])
+                            temp_scores[sparse_row] = \
+                                Y[sparse_row, non_sparse_columns].dot(self.V_[non_sparse_columns])
+                        temp_scores = temp_scores / np.linalg.norm(temp_scores, axis=0)
+                        U_ = temp_scores
+                    else:
+                        U_ = Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+                    return Ts_, T_ , U_
                 else:
-                    return Ts_, Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+                    # Calculate Y scores
+                    if self.sparse_data:
+                        temp_scores = Y.dot(self.V_)
+                        for sparse_row in sparse_Y_info_['Y'][0]:
+                            non_sparse_columns = ~np.isnan(Y[sparse_row, :])
+                            temp_scores[sparse_row] = \
+                                Y[sparse_row, non_sparse_columns].dot(self.V_[non_sparse_columns])
+                        temp_scores = temp_scores / np.linalg.norm(temp_scores, axis=0)
+                        U_ = temp_scores
+                    else:
+                        U_ = Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+                    return Ts_, U_
             else:
                 if self.method is not 'SIMPLS':
                     # Here the block scores are calculated iteratively for new blocks
@@ -903,11 +1072,29 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         T_.append(np.empty((X[block].shape[0], 0)))
                         for comp in range(self.n_components):
                             if comp == 0:
-                                T_[block] = X[block].dot(self.W_[block][:, comp:comp + 1])
+                                if self.sparse_data:
+                                    temp_scores = X[block].dot(self.W_[block][:, comp:comp+1])
+                                    for sparse_row in sparse_X_info_[block][0]:
+                                        non_sparse_columns = ~np.isnan(X[block][sparse_row, :])
+                                        temp_scores[sparse_row] = \
+                                            X[block][sparse_row, non_sparse_columns].dot(
+                                                self.W_[block][:, comp:comp + 1][non_sparse_columns])
+                                    T_[block] = temp_scores
+                                else:
+                                    T_[block] = X[block].dot(self.W_[block][:, comp:comp+1])
                             else:
                                 # deflate the block
                                 X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
-                                T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
+                                if self.sparse_data:
+                                    temp_scores = X[block].dot(self.W_[block][:, comp:comp + 1])
+                                    for sparse_row in sparse_X_info_[block][0]:
+                                        non_sparse_columns = ~np.isnan(X[block][sparse_row, :])
+                                        temp_scores[sparse_row] = \
+                                            X[block][sparse_row, non_sparse_columns].dot(
+                                                self.W_[block][:, comp:comp + 1][non_sparse_columns])
+                                    T_[block] = np.hstack((T_[block], temp_scores))
+                                else:
+                                    T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp+1])))
                     return Ts_, T_
                 else:
                     return Ts_
@@ -916,17 +1103,33 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             if isinstance(X, list) and not isinstance(X[0], list):
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64)
+                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data)
+                    if self.sparse_data:
+                        sparse_X_info_[block] = self.check_sparsity_level(X[block])
             else:
                 # Check dimensions
-                X = [check_array(X, dtype=np.float64)]
+                X = [check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)]
+                if self.sparse_data:
+                    sparse_X_info_[0] = self.check_sparsity_level(X)
 
             X_comp = np.hstack(X)
+            if self.sparse_data:
+                sparse_X_info_['comp'] = self.check_sparsity_level(X_comp)
 
-            Ts_ = X_comp.dot(self.R_)
+            if self.sparse_data:
+                temp_Ts = X_comp.dot(self.R_)
+                for sparse_row in sparse_X_info_['comp'][0]:
+                    non_sparse_columns = ~np.isnan(X_comp[sparse_row, :])
+                    temp_Ts[sparse_row] = \
+                        X_comp[sparse_row, non_sparse_columns].dot(self.R_[non_sparse_columns])
+                Ts_ = temp_Ts
+            else:
+                Ts_ = X_comp.dot(self.R_)
 
             if Y is not None:
-                Y = check_array(Y, dtype=np.float64, ensure_2d=False)
+                Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data)
+                if self.sparse_data:
+                    sparse_Y_info_['Y'] = self.check_sparsity_level(Y)
                 if Y.ndim == 1:
                     Y = Y.reshape(-1, 1)
                     # Here the block scores are calculated iteratively for new blocks
@@ -935,12 +1138,41 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         T_.append(np.empty((X[block].shape[0], 0)))
                         for comp in range(self.n_components):
                             if comp == 0:
-                                T_[block] = X[block].dot(self.W_[block][:, comp:comp + 1])
+                                if self.sparse_data:
+                                    temp_scores = X[block].dot(self.W_[block][:, comp:comp+1])
+                                    for sparse_row in sparse_X_info_[block][0]:
+                                        non_sparse_columns = ~np.isnan(X[block][sparse_row, :])
+                                        temp_scores[sparse_row] = \
+                                            X[block][sparse_row, non_sparse_columns].dot(
+                                                self.W_[block][:, comp:comp + 1][non_sparse_columns])
+                                    T_[block] = temp_scores
+                                else:
+                                    T_[block] = X[block].dot(self.W_[block][:, comp:comp+1])
                             else:
                                 # deflate the block
                                 X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
-                                T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
-                return Ts_, T_, Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0), T_
+                                if self.sparse_data:
+                                    temp_scores = X[block].dot(self.W_[block][:, comp:comp + 1])
+                                    for sparse_row in sparse_X_info_[block][0]:
+                                        non_sparse_columns = ~np.isnan(X[block][sparse_row, :])
+                                        temp_scores[sparse_row] = \
+                                            X[block][sparse_row, non_sparse_columns].dot(
+                                                self.W_[block][:, comp:comp + 1][non_sparse_columns])
+                                    T_[block] = np.hstack((T_[block], temp_scores))
+                                else:
+                                    T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp+1])))
+                # Calculate Y scores
+                if self.sparse_data:
+                    temp_scores = Y.dot(self.V_)
+                    for sparse_row in sparse_Y_info_['Y'][0]:
+                        non_sparse_columns = ~np.isnan(Y[sparse_row, :])
+                        temp_scores[sparse_row] = \
+                            Y[sparse_row, non_sparse_columns].dot(self.V_[non_sparse_columns])
+                    temp_scores = temp_scores / np.linalg.norm(temp_scores, axis=0)
+                    U_ = temp_scores
+                else:
+                    U_ = Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
+                return Ts_, T_, U_, T_
             else:
                 # Here the block scores are calculated iteratively for new blocks
                 T_ = []
@@ -948,11 +1180,29 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     T_.append(np.empty((X[block].shape[0], 0)))
                     for comp in range(self.n_components):
                         if comp == 0:
-                            T_[block] = X[block].dot(self.W_[block][:, comp:comp + 1])
+                            if self.sparse_data:
+                                temp_scores = X[block].dot(self.W_[block][:, comp:comp + 1])
+                                for sparse_row in sparse_X_info_[block][0]:
+                                    non_sparse_columns = ~np.isnan(X[block][sparse_row, :])
+                                    temp_scores[sparse_row] = \
+                                        X[block][sparse_row, non_sparse_columns].dot(
+                                            self.W_[block][:, comp:comp + 1][non_sparse_columns])
+                                T_[block] = temp_scores
+                            else:
+                                T_[block] = X[block].dot(self.W_[block][:, comp:comp + 1])
                         else:
                             # deflate the block
                             X[block] = X[block] - Ts_[:, comp-1:comp].dot(self.P_[block][:, comp-1:comp].T)
-                            T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
+                            if self.sparse_data:
+                                temp_scores = X[block].dot(self.W_[block][:, comp:comp + 1])
+                                for sparse_row in sparse_X_info_[block][0]:
+                                    non_sparse_columns = ~np.isnan(X[block][sparse_row, :])
+                                    temp_scores[sparse_row] = \
+                                        X[block][sparse_row, non_sparse_columns].dot(
+                                            self.W_[block][:, comp:comp + 1][non_sparse_columns])
+                                T_[block] = np.hstack((T_[block], temp_scores))
+                            else:
+                                T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
                 return Ts_, T_
 
     def predict(self, X):
@@ -971,22 +1221,45 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         """
         check_is_fitted(self, 'beta_')
 
+        if self.sparse_data:
+            sparse_X_info_ = {}
+
         if self.standardize:
             if isinstance(X, list) and not isinstance(X[0], list):
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64)
+                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data)
                     X[block] = self.x_scalers_[block].transform(X[block])
             else:
-                X = check_array(X, dtype=np.float64)
+                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)
                 X = [self.x_scalers_[0].transform(X)]
 
 
             X = np.hstack(X)
-            y_hat = self.y_scaler_.inverse_transform(X.dot(self.beta_))
+            if self.sparse_data:
+                sparse_X_info_['comp'] = self.check_sparsity_level(X)
+            if self.sparse_data:
+                temp_y_hat = X.dot(self.beta_)
+                for sparse_row in sparse_X_info_['comp'][0]:
+                    non_sparse_columns = ~np.isnan(X[sparse_row, :])
+                    temp_y_hat[sparse_row] = \
+                        X[sparse_row, non_sparse_columns].dot(self.beta_[non_sparse_columns])
+                y_hat = self.y_scaler_.inverse_transform(temp_y_hat)
+            else:
+                y_hat = self.y_scaler_.inverse_transform(X.dot(self.beta_))
         else:
             X = np.hstack(X)
-            y_hat = X.dot(self.beta_)
+            if self.sparse_data:
+                sparse_X_info_['comp'] = self.check_sparsity_level(X)
+            if self.sparse_data:
+                temp_y_hat = X.dot(self.beta_)
+                for sparse_row in sparse_X_info_['comp'][0]:
+                    non_sparse_columns = ~np.isnan(X[sparse_row, :])
+                    temp_y_hat[sparse_row] = \
+                        X[sparse_row, non_sparse_columns].dot(self.beta_[non_sparse_columns])
+                y_hat = temp_y_hat
+            else:
+                y_hat = X.dot(self.beta_)
 
         return y_hat
 
