@@ -31,6 +31,7 @@ def load_Intro_Data():
                  'ftir1': [], 'ftir2': [], 'ftir3': []}
     dir = 'MBPLS_intro'
     file_path = os.path.join(data_path(), dir)
+    path_checker(file_path)
     for file in file_dict.keys():
         abs_file_path = os.path.join(file_path, '{0}.pkl'.format(file))
         if file_checker(file, abs_file_path, dir) == 0:
@@ -46,6 +47,7 @@ def load_FTIR_Data():
     file_dict = {'ftir1': [], 'ftir2': [], 'ftir3': []}
     dir = 'FTIR'
     file_path = os.path.join(data_path(), dir)
+    path_checker(file_path)
     for file in file_dict.keys():
         abs_file_path = os.path.join(file_path, '{0}.pkl'.format(file))
         if file_checker(file, abs_file_path, dir) == 0:
@@ -60,6 +62,7 @@ def load_CarbohydrateMicroarrays_Data():
     file_dict = {'extraction1': [], 'extraction2': [], 'extraction3': []}
     dir = 'CarbohydrateMicroarrays'
     file_path = os.path.join(data_path(), dir)
+    path_checker(file_path)
     for file in file_dict.keys():
         abs_file_path = os.path.join(file_path, '{0}.pkl'.format(file))
         if file_checker(file, abs_file_path, dir) == 0:
@@ -69,6 +72,16 @@ def load_CarbohydrateMicroarrays_Data():
 
     print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
     return file_dict
+
+def path_checker(path):
+    if not os.path.isdir(path):
+        try:
+            os.mkdir(path)
+            print("Path {0} was successfully created to store the data".format(path))
+        except:
+            print("Path {0} could not be created.".format(path))
+            return 1
+    return 0
 
 def file_checker(file, abs_file_path, dir):
     if os.path.isfile(abs_file_path):
