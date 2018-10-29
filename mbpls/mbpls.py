@@ -35,7 +35,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         --------------
 
         method : string (default 'NIPALS')
-            The method being used to derive the model attributes, possible are 'UNIPALS', 'NIPALS', 'SIMPLS' and 'KERNEL'
+            The method being used to derive the model attributes, possible are 'UNIPALS', 'NIPALS', 'SIMPLS' and
+            'KERNEL'
 
         n_components : int
             Number (:math:`k`) of Latent Variables (LV)
@@ -57,7 +58,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
         sparse_data : bool (default False)
             NIPALS is the only algorithm that can handle sparse data using the method of H. Martens and Martens (2001)
-            (p. 381). If this parameter is set to 'True', the method will be forced to NIPALS and sparse data is allowed.
+            (p. 381). If this parameter is set to 'True', the method will be forced to NIPALS and sparse data is
+            allowed.
             Without setting this parameter to 'True', sparse data will not be accepted.
 
         
@@ -101,9 +103,9 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         -----
         
         According to literature one distinguishes between PLS1 [ref], PLS2 [ref] and MBPLS [ref].
-        Common goal is to find loading vectors :math:`p` and :math:`v` which project the data to latent variable scores :math:`ts` and :math:`u` 
-        indicating maximal covariance. Subsequently, the explained variance is deflated and further LVs can be extracted.
-        Deflation for the :math:`k`-th LV is obtained as:
+        Common goal is to find loading vectors :math:`p` and :math:`v` which project the data to latent variable scores
+        :math:`ts` and :math:`u` indicating maximal covariance. Subsequently, the explained variance is deflated and
+        further LVs can be extracted. Deflation for the :math:`k`-th LV is obtained as:
            
         
         .. math::
@@ -148,7 +150,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         Examples
         --------
         
-        Quick Start: Two random data blocks :math:`X_1` and :math:`X_2` and a random reference vector :math:`y` for predictive modeling.
+        Quick Start: Two random data blocks :math:`X_1` and :math:`X_2` and a random reference vector :math:`y` for
+        predictive modeling.
         
         .. code-block:: python
         
@@ -181,14 +184,14 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
     def check_sparsity_level(self, data):
         total_rows, total_columns = data.shape
-        sparse_columns = np.isnan(data).sum(axis=0)>0
+        sparse_columns = np.isnan(data).sum(axis=0) > 0
         sparse_columns_n = sparse_columns.sum()
-        dense_columns = np.where(sparse_columns==0)[0]
-        sparse_columns = np.where(sparse_columns==1)[0]
+        dense_columns = np.where(sparse_columns == 0)[0]
+        sparse_columns = np.where(sparse_columns == 1)[0]
         sparse_rows = np.isnan(data).sum(axis=1) > 0
         sparse_rows_n = sparse_rows.sum()
-        dense_rows = np.where(sparse_rows==0)[0]
-        sparse_rows = np.where(sparse_rows==1)[0]
+        dense_rows = np.where(sparse_rows == 0)[0]
+        sparse_rows = np.where(sparse_rows == 1)[0]
         if sparse_columns_n/total_columns > 0.5:
             warn("The sparsity of your data is likely to high for this algorithm. This can cause either convergence"
                  "problems or crash the algorithm.")
@@ -552,7 +555,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                 Ts_norm = np.linalg.norm(self.Ts_, axis=0)
                 self.V_ = self.V_ * Ts_norm
                 self.P_ = self.P_ * Ts_norm
-                ## End
+                # End
                 self.Ts_ = self.Ts_ / Ts_norm
                 # Calculate extra variables
                 # IDEA: Check if this could be done more efficiently
@@ -600,10 +603,12 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             if num_features > num_samples:
                 # Based on
                 # [1] S. Rännar, F. Lindgren, P. Geladi, and S. Wold, “A PLS kernel algorithm for data sets with many
-                # variables and fewer objects. Part 1: Theory and algorithm,” J. Chemom., vol. 8, no. 2, pp. 111–125, Mar. 1994.
+                # variables and fewer objects. Part 1: Theory and algorithm,” J. Chemom., vol. 8, no. 2, pp. 111–125,
+                # Mar. 1994.
                 # and
                 # [1] S. Rännar, P. Geladi, F. Lindgren, and S. Wold, “A PLS kernel algorithm for data sets with many
-                # variables and few objects. Part II: Cross‐validation, missing data and examples,” J. Chemom., vol. 9, no. 6, pp. 459–470, 1995.
+                # variables and few objects. Part II: Cross‐validation, missing data and examples,”
+                # J. Chemom., vol. 9, no. 6, pp. 459–470, 1995.
                 # Calculate association matrices
                 AS_X = X.dot(X.T)
                 AS_Y = Y.dot(Y.T)
@@ -748,9 +753,9 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         if self.sparse_data:
                             temp_weights = Xblocks[block].T.dot(u_a) / u_a.T.dot(u_a)
                             for sparse_column in self.sparse_X_info_[block][1]:
-                                non_sparse_rows = ~np.isnan(Xblocks[block][:,sparse_column])
+                                non_sparse_rows = ~np.isnan(Xblocks[block][:, sparse_column])
                                 temp_weights[sparse_column] = \
-                                    Xblocks[block][non_sparse_rows, sparse_column].T.dot(u_a[non_sparse_rows])/\
+                                    Xblocks[block][non_sparse_rows, sparse_column].T.dot(u_a[non_sparse_rows]) / \
                                     u_a[non_sparse_rows].T.dot(u_a[non_sparse_rows])
                             weights.append(temp_weights)
                             weights_non_normal.append(temp_weights)
@@ -763,13 +768,15 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     # 2. Regress block weights against rows of each block
                     scores = []
                     for block in range(self.num_blocks_):
-                        # Diverging from Wangen and Kowalski by using regression instead of dividing by number of components
+                        # Diverging from Wangen and Kowalski by using regression instead of dividing by # of components
                         if self.sparse_data:
                             temp_scores = Xblocks[block].dot(weights[block])
                             for sparse_row in self.sparse_X_info_[block][0]:
-                                non_sparse_columns = ~np.isnan(Xblocks[block][sparse_row,:])
+                                non_sparse_columns = ~np.isnan(Xblocks[block][sparse_row, :])
                                 temp_scores[sparse_row] = \
-                                    Xblocks[block][sparse_row, non_sparse_columns].dot(weights[block][non_sparse_columns])
+                                    Xblocks[block][sparse_row, non_sparse_columns].dot(
+                                        weights[block][non_sparse_columns]) / \
+                                    weights[block][non_sparse_columns].T.dot(weights[block][non_sparse_columns])
                             scores.append(temp_scores)
                         else:
                             scores.append(Xblocks[block].dot(weights[block]))
@@ -803,7 +810,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         for sparse_row in self.sparse_X_info_[block][0]:
                             non_sparse_columns = ~np.isnan(Y_calc[sparse_row, :])
                             temp_scores[sparse_row] = \
-                                Y_calc[sparse_row, non_sparse_columns].dot(response_weights[non_sparse_columns])/ \
+                                Y_calc[sparse_row, non_sparse_columns].dot(response_weights[non_sparse_columns]) / \
                                 response_weights[non_sparse_columns].T.dot(response_weights[non_sparse_columns])
                         response_scores = temp_scores / np.linalg.norm(temp_scores)
                         u_a = response_scores
@@ -821,7 +828,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         for sparse_column in self.sparse_X_info_[block][1]:
                             non_sparse_rows = ~np.isnan(Xblocks[block][:, sparse_column])
                             temp_loadings[sparse_column] = \
-                                Xblocks[block][non_sparse_rows, sparse_column].T.dot(superscores[non_sparse_rows])
+                                Xblocks[block][non_sparse_rows, sparse_column].T.dot(superscores[non_sparse_rows]) / \
+                                superscores[non_sparse_rows].T.dot(superscores[non_sparse_rows])
                         loadings[block] = temp_loadings
                     else:
                         loadings[block] = Xblocks[block].T.dot(superscores)
@@ -846,7 +854,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         varx_blocks_explained.append(varx_explained / varxblocks[block])
                     self.explained_var_xblocks_ = np.hstack(
                         (self.explained_var_xblocks_, np.matrix(varx_blocks_explained).T))
-                    # 10. Upweight Block Importances of blocks with less features (provided as additional figure of merit)
+                    # 10. Upweight Block Importances of blocks with less features
+                    # (provided as additional figure of merit)
                     sum_vars = []
                     a = superweights ** 2
                     for vector in weights:
@@ -1287,7 +1296,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             return metrics.explained_variance_score(Y, self.predict(X))
         else:
             # When the data is not standardized, the variables have to be variance weighted
-            return metrics.explained_variance_score(Y, self.predict(X), sample_weight=None, multioutput='variance_weighted')
+            return metrics.explained_variance_score(Y, self.predict(X), sample_weight=None,
+                                                    multioutput='variance_weighted')
 
     def plot(self, num_components=2):
         """
@@ -1399,7 +1409,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         ax = plt.subplot(gs3[0, 0])
         width = 0.8 / len(num_components)
         for i, comp in enumerate(num_components):
-            ax.bar(np.arange(self.num_blocks_) + 0.6 + i * width, 100 * np.ravel(self.A_[:, comp]), width=width, \
+            ax.bar(np.arange(self.num_blocks_) + 0.6 + i * width, 100 * np.ravel(self.A_[:, comp]), width=width,
                    label="Component {}".format(comp + 1))
         ax.set_xticklabels(list(np.arange(self.num_blocks_) + 1))
         ax.xaxis.set_major_locator(ticker.IndexLocator(base=1, offset=0.4))
