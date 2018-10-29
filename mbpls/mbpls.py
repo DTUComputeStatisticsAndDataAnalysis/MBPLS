@@ -251,6 +251,24 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
             self.y_scaler_ = StandardScaler(with_mean=True, with_std=True)
             Y = self.y_scaler_.fit_transform(Y)
+        else:
+            if isinstance(X, list) and not isinstance(X[0], list):
+                if self.sparse_data is True:
+                    self.sparse_X_info_ = {}
+                for block in range(len(X)):
+                    # Check dimensions
+                    check_consistent_length(X[block], Y)
+                    X[block] = check_array(X[block], dtype=np.float64, copy=True, force_all_finite=not self.sparse_data)
+                    if self.sparse_data is True:
+                        self.sparse_X_info_[block] = self.check_sparsity_level(X[block])
+            else:
+                # Check dimensions
+                X = check_array(X, dtype=np.float64, copy=True, force_all_finite=not self.sparse_data)
+                if self.sparse_data is True:
+                    self.sparse_X_info_ = {}
+                    self.sparse_X_info_[0] = self.check_sparsity_level(X)
+                check_consistent_length(X, Y)
+                X = [X]
 
         self.num_blocks_ = len(X)
 
@@ -1117,9 +1135,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         sparse_X_info_[block] = self.check_sparsity_level(X[block])
             else:
                 # Check dimensions
-                X = [check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)]
+                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)
                 if self.sparse_data:
                     sparse_X_info_[0] = self.check_sparsity_level(X)
+                X = [X]
 
             X_comp = np.hstack(X)
             if self.sparse_data:
@@ -1257,6 +1276,13 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             else:
                 y_hat = self.y_scaler_.inverse_transform(X.dot(self.beta_))
         else:
+            if isinstance(X, list) and not isinstance(X[0], list):
+                for block in range(len(X)):
+                    # Check dimensions
+                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data)
+            else:
+                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)
+                X = [X]
             X = np.hstack(X)
             if self.sparse_data:
                 sparse_X_info_['comp'] = self.check_sparsity_level(X)
