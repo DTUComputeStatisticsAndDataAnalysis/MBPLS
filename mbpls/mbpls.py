@@ -389,10 +389,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     # 11. add t, w, u, v, ts, eigenv, loading and a to T_, W_, U_, V_, Ts_, weights, P_ and A_
                     self.V_ = np.hstack((self.V_, v))
                     self.U_ = np.hstack((self.U_, u))
-                    self.A_ = np.hstack((self.A_, np.matrix(a).T))
-                    self.A_corrected_ = np.hstack((self.A_corrected_, np.matrix(a_corrected).T))
+                    self.A_ = np.hstack((self.A_, np.array(a).reshape(-1, 1)))
+                    self.A_corrected_ = np.hstack((self.A_corrected_, np.array(a_corrected).reshape(-1,1)))
                     self.explained_var_xblocks_ = np.hstack(
-                        (self.explained_var_xblocks_, np.matrix(varx_blocks_explained).T))
+                        (self.explained_var_xblocks_, np.array(varx_blocks_explained).reshape(-1, 1)))
                     self.Ts_ = np.hstack((self.Ts_, ts))
                     self.P_ = np.hstack((self.P_, p))
                     weights = np.hstack((weights, eigenv))
@@ -481,10 +481,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     # 11. add t, w, u, v, ts, eigenv, loading and a to T_, W_, U_, V_, Ts_, weights, P_ and A_
                     self.V_ = np.hstack((self.V_, v))
                     self.U_ = np.hstack((self.U_, u))
-                    self.A_ = np.hstack((self.A_, np.matrix(a).T))
-                    self.A_corrected_ = np.hstack((self.A_corrected_, np.matrix(a_corrected).T))
+                    self.A_ = np.hstack((self.A_, np.array(a).reshape(-1, 1)))
+                    self.A_corrected_ = np.hstack((self.A_corrected_, np.array(a_corrected).reshape(-1, 1)))
                     self.explained_var_xblocks_ = np.hstack(
-                        (self.explained_var_xblocks_, np.matrix(varx_blocks_explained).T))
+                        (self.explained_var_xblocks_, np.array(varx_blocks_explained).reshape(-1, 1)))
                     self.Ts_ = np.hstack((self.Ts_, ts))
                     self.P_ = np.hstack((self.P_, p))
                     weights = np.hstack((weights, eigenv))
@@ -547,11 +547,11 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                                 factor = 1 - sum_var / np.sum(sum_vars)
                                 a_corrected.append(bip * factor)
                             a_corrected = list(a_corrected / np.sum(a_corrected))
-                        self.A_corrected_ = np.hstack((self.A_corrected_, np.matrix(a_corrected).T))
+                        self.A_corrected_ = np.hstack((self.A_corrected_, np.array(a_corrected).reshape(-1, 1)))
                         u = Y.dot(v.T) / v.dot(v.T)
                         u = u / np.linalg.norm(u)
                         self.U_ = np.hstack((self.U_, u))
-                        self.A_ = np.hstack((self.A_, np.matrix(a).T))
+                        self.A_ = np.hstack((self.A_, np.array(a).reshape(-1, 1)))
 
                     # Update kernel and variance/covariance matrices
                     deflate_matrix = np.eye(S.shape[0]) - eigenv.dot(p)
@@ -605,7 +605,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                             varx_explained = (X_explained[:, indices[0]:indices[1]] ** 2).sum()
                             varx_blocks_explained.append(varx_explained / varxblocks[block])
                         self.explained_var_xblocks_ = np.hstack(
-                            (self.explained_var_xblocks_, np.matrix(varx_blocks_explained).T))
+                            (self.explained_var_xblocks_, np.array(varx_blocks_explained).reshape(-1, 1)))
 
                         # Deflate X matrix
                         X = X - X_explained
@@ -682,7 +682,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         if component == 0:
                             varx = (X ** 2).sum()
                             vary = (Y ** 2).sum()
-                        self.A_ = np.hstack((self.A_, np.matrix(a).T))
+                        self.A_ = np.hstack((self.A_, np.array(a).reshape(-1, 1)))
                         for block in range(self.num_blocks_):
                             self.W_[block] = np.hstack((self.W_[block], w[block]))
                             self.T_[block] = np.hstack((self.T_[block], t[block]))
@@ -704,7 +704,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                             varx_explained = (X_explained[:, indices[0]:indices[1]] ** 2).sum()
                             varx_blocks_explained.append(varx_explained / varxblocks[block])
                         self.explained_var_xblocks_ = np.hstack(
-                            (self.explained_var_xblocks_, np.matrix(varx_blocks_explained).T))
+                            (self.explained_var_xblocks_, np.array(varx_blocks_explained).reshape(-1, 1)))
 
                         # Deflate X matrix
                         X = X - X_explained
@@ -726,7 +726,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                                 factor = 1 - sum_var / np.sum(sum_vars)
                                 a_corrected.append(bip * factor)
                             a_corrected = list(a_corrected / np.sum(a_corrected))
-                        self.A_corrected_ = np.hstack((self.A_corrected_, np.matrix(a_corrected).T))
+                        self.A_corrected_ = np.hstack((self.A_corrected_, np.array(a_corrected).reshape(-1, 1)))
 
                 # restore blockwise loadings
                 self.P_ = np.split(self.P_, [index[1] for index in feature_indices])[:-1]
@@ -871,7 +871,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         varx_explained = (superscores.dot(loadings[block].T) ** 2).sum()
                         varx_blocks_explained.append(varx_explained / varxblocks[block])
                     self.explained_var_xblocks_ = np.hstack(
-                        (self.explained_var_xblocks_, np.matrix(varx_blocks_explained).T))
+                        (self.explained_var_xblocks_, np.array(varx_blocks_explained).reshape(-1, 1)))
                     # 10. Upweight Block Importances of blocks with less features
                     # (provided as additional figure of merit)
                     sum_vars = []
@@ -886,7 +886,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                             factor = 1 - sum_var / np.sum(sum_vars)
                             a_corrected.append(bip * factor)
                         a_corrected = list(a_corrected / np.sum(a_corrected))
-                    self.A_corrected_ = np.hstack((self.A_corrected_, np.matrix(a_corrected)))
+                    self.A_corrected_ = np.hstack((self.A_corrected_, np.array(a_corrected)))
 
 
                 # 9. Deflate X_calc
