@@ -21,6 +21,8 @@ all = ['data_path',
        'load_FTIR_Data',
        'load_CarbohydrateMicroarrays_Data']
 
+GITHUB_DATADIR = 'https://github.com/b0nsaii/MBPLS/raw/Package_OOP/mbpls/data'
+
 def data_path():
     path = os.path.dirname(os.path.abspath(__file__))
     return path
@@ -34,7 +36,7 @@ def load_Intro_Data():
     path_checker(file_path)
     for file in file_dict.keys():
         abs_file_path = os.path.join(file_path, '{0}.pkl'.format(file))
-        if file_checker(file, abs_file_path, dir) == 0:
+        if file_checker('{0}.pkl'.format(file), abs_file_path, GITHUB_DATADIR, dir) == 0:
             file_dict[file] = pd.read_pickle(abs_file_path)
         else:
             print('File {0} was not available and could not be downloaded'.format(file))
@@ -50,7 +52,7 @@ def load_FTIR_Data():
     path_checker(file_path)
     for file in file_dict.keys():
         abs_file_path = os.path.join(file_path, '{0}.pkl'.format(file))
-        if file_checker(file, abs_file_path, dir) == 0:
+        if file_checker('{0}.pkl'.format(file), abs_file_path, GITHUB_DATADIR, dir) == 0:
             file_dict[file] = pd.read_pickle(abs_file_path)
         else:
             print('File {0} was not available and could not be downloaded'.format(file))
@@ -65,7 +67,7 @@ def load_CarbohydrateMicroarrays_Data():
     path_checker(file_path)
     for file in file_dict.keys():
         abs_file_path = os.path.join(file_path, '{0}.pkl'.format(file))
-        if file_checker(file, abs_file_path, dir) == 0:
+        if file_checker('{0}.pkl'.format(file), abs_file_path, GITHUB_DATADIR, dir) == 0:
             file_dict[file] = pd.read_pickle(abs_file_path)
         else:
             print('File {0} was not available and could not be downloaded'.format(file))
@@ -83,12 +85,11 @@ def path_checker(path):
             return 1
     return 0
 
-def file_checker(file, abs_file_path, dir):
+def file_checker(file, abs_file_path, github_dir, dir):
     if os.path.isfile(abs_file_path):
         pass
     else: #Download the file from the github repository
-        url = 'https://github.com/b0nsaii/MBPLS/raw/Package_OOP/mbpls/data/{0}/{1}.pkl'.format(
-                    dir, file)
+        url = '{0}/{1}/{2}'.format(github_dir, dir, file)
         print('File not available locally. Trying to download file {0} from github repository.\n Link: {1}'
               .format(file, url))
         try:

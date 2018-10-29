@@ -19,13 +19,15 @@ noise = 5      # add noise between 0..10
 # initialize
 import numpy as np
 import os
-import mbpls
+from . import load_data
 
 if __name__ == '__main__':
-    test_dir = os.path.abspath(os.path.join(mbpls.data.get_data.data_path(), '..', 'tests'))
+    test_dir = load_data.data_path()
 else:
     test_dir = os.path.dirname(__file__)
 
+# First check the availability of test files
+assert load_data.check_test_files() == 0, "Not all required files could be obtained. Tests cannot be performed"
 
 #%% Fit MBPLS model and assert that result matches reference result
 # SIMPLS doesn't give Multiblock results, therefore left out for A (block importance) and T (block scores)
