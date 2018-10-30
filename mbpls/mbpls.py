@@ -318,7 +318,6 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         Xblocks.append(X[:, indices[0]:indices[1]])
 
                     # 2. Calculate eigenv (normal pls weights) by SVD(X'YY'X) --> eigenvector with largest eigenvalue
-                    # TODO: Possible error, problems are not identified in Test scripts
                     S = np.linalg.multi_dot([X.T, Y, Y.T, X])
                     if self.full_svd:
                         eigenv = np.linalg.svd(S, full_matrices=self.full_svd)[0][:, 0:1]
@@ -507,7 +506,6 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                 # Based on [1] F. Lindgren, P. Geladi, and S. Wold, “The kernel algorithm for PLS,” J. Chemom.,
                 # vol. 7, no. 1, pp. 45–59, Jan. 1993.
                 # Calculate kernel matrix once
-                # TODO: Possible errors in this section are not identified by the test scripts
                 S = np.linalg.multi_dot([X.T, Y, Y.T, X])
                 # Calculate variance covariance matrixes
                 VAR = X.T.dot(X)
@@ -886,7 +884,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                             factor = 1 - sum_var / np.sum(sum_vars)
                             a_corrected.append(bip * factor)
                         a_corrected = list(a_corrected / np.sum(a_corrected))
-                    self.A_corrected_ = np.hstack((self.A_corrected_, np.array(a_corrected)))
+                    self.A_corrected_ = np.hstack((self.A_corrected_, np.array(a_corrected).reshape(-1, 1)))
 
 
                 # 9. Deflate X_calc
