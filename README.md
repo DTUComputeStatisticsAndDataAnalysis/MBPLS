@@ -1,15 +1,13 @@
 # Partial Least Squares Package
 
-An easy to use Python package for (Multiblock) Partial Least Squares prediction modelling of univariate or multivariate outcomes. Four state of the art algorithms have been implemented and optimized for robust performance on large data matrices. The package has been designed to be able to handle missing data, such that application is straight forward using the commonly known Scikit-Learn syntax and its model selection toolbox.   
+An easy to use Python package for (Multiblock) Partial Least Squares prediction modelling of univariate or multivariate outcomes. Four state of the art algorithms have been implemented and optimized for robust performance on large data matrices. The package has been designed to be able to handle missing data, such that application is straight forward using the commonly known Scikit-Learn API and its model selection toolbox.   
 
 ## Installation
 
-* Install the package for Python3 using the following command. Some dependencies might require an upgrade (scikit-learn, numpy and scipy).
-
+* Install the package for Python3 using the following command. Some dependencies might require an upgrade (scikit-learn, numpy and scipy).\
 `$ pip install mbpls`
 
-* Now you can import the MBPLS class by typing
-
+* Now you can import the MBPLS class by typing\
 `from mbpls.mbpls import MBPLS`
 
 ## Quick Start
