@@ -13,7 +13,7 @@ import mbpls
 
 NAME = "mbpls"
 VERSION = mbpls.__version__
-DESCRIPTION = "An implementation of the most common partial least squares algorithm as multi-block methods"
+DESCRIPTION = "An implementation of the most common partial least squares algorithms as multi-block methods"
 with open('README.md') as f:
     LONG_DESCRIPTION = f.read()
     LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown',
@@ -24,7 +24,6 @@ LICENSE = 'new BSD'
 
 # This is the lowest tested version. Below might work as well
 NUMPY_MIN_VERSION = '1.13.3'
-MATPLOTLIB_MIN_VERSION = '2.1.1'
 SCIPY_MIN_VERSION = '1.0.0'
 SCIKIT_LEARN_MIN_VERSION = '0.20.0'
 
@@ -55,7 +54,6 @@ setup(name=NAME,
                    ],
       install_requires=[
           'numpy>={0}'.format(NUMPY_MIN_VERSION),
-          'matplotlib>={0}'.format(MATPLOTLIB_MIN_VERSION),
           'scipy>={0}'.format(SCIPY_MIN_VERSION),
           'scikit-learn>={0}'.format(SCIKIT_LEARN_MIN_VERSION)
             ],

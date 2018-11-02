@@ -272,7 +272,6 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
 
         self.num_blocks_ = len(X)
 
-
         # Store start/end feature indices for all x blocks
         feature_indices = []
         for block in X:
@@ -732,6 +731,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             return self
 
         elif self.method == 'NIPALS':
+            # Based on [1] J. A. Westerhuis, T. Kourti, and J. F. MacGregor, “Analysis of multiblock and hierarchical
+            # PCA and PLS models,” J. Chemom., vol. 12, no. 5, pp. 301–321, Sep. 1998.
             # In case of sparse data, calculations are based on the algorithm of
             # H. Martens and Martens (2001) (p. 381)
             #
