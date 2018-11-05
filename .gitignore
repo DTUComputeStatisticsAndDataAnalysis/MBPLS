@@ -7,6 +7,9 @@ __pycache__/
 *.so
 .Rhistory
 
+# Mac files
+.idea
+
 # Distribution / packaging
 .Python
 build/
@@ -103,3 +106,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Temporary install
+.unipls.egg-info
