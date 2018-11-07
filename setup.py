@@ -68,8 +68,10 @@ def setup_package():
                   'nbsphinx',
                   'nbsphinx_link'
                     ],
-              'plotting': [
-                  'matplotlib'],
+              'extras': [
+                  'matplotlib',
+                  'pandas'
+              ],
           },
           python_requires='>=3.5',
           )
