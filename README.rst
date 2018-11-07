@@ -4,6 +4,9 @@ Multiblock Partial Least Squares Package
 .. image:: https://img.shields.io/pypi/v/mbpls.svg
     :target: https://pypi.python.org/pypi/mbpls
     :alt: Pypi Version
+.. image:: https://travis-ci.com/DTUComputeStatisticsAndDataAnalysis/MBPLS.svg?branch=master
+   :target: https://travis-ci.com/DTUComputeStatisticsAndDataAnalysis/MBPLS
+   :alt: Build Status
 .. image:: https://img.shields.io/pypi/l/mbpls.svg
     :target: https://pypi.python.org/pypi/mbpls/
     :alt: License
