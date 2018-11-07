@@ -169,7 +169,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             
             y_pred = mbpls.predict([x1, x2])
             
-        More elaborate examples can be found at https://github.com/b0nsaii/MBPLS
+        More elaborate examples can be found at https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS
     """
 
     def __init__(self, n_components=2, full_svd=False, method='NIPALS', standardize=True, max_tol=1e-14, calc_all=True,

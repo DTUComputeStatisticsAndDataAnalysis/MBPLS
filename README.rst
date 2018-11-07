@@ -1,5 +1,15 @@
-Partial Least Squares Package
-=============================
+Multiblock Partial Least Squares Package
+========================================
+
+.. image:: https://img.shields.io/pypi/v/mbpls.svg
+    :target: https://pypi.python.org/pypi/mbpls
+    :alt: Pypi Version
+.. image:: https://img.shields.io/pypi/l/mbpls.svg
+    :target: https://pypi.python.org/pypi/mbpls/
+    :alt: License
+.. image:: https://readthedocs.org/projects/mbpls/badge/?version=latest
+    :target: https://mbpls.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
 
 An easy to use Python package for (Multiblock) Partial Least Squares
 prediction modelling of univariate or multivariate outcomes. Four state

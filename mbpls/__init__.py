@@ -22,4 +22,4 @@ from . import mbpls, data, tests
 
 __all__ = ["mbpls", "data", "tests"]
 
-__version__ = "1.0.5a1"
+__version__ = "1.0.6a1"

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # -*- coding: utf-8 -*-
 #
@@ -14,7 +14,7 @@ import mbpls
 NAME = "mbpls"
 VERSION = mbpls.__version__
 DESCRIPTION = "An implementation of the most common partial least squares algorithms as multi-block methods"
-URL = 'https://github.com/b0nsaii/MBPLS'
+URL = 'https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS'
 AUTHORS = "Andreas Baum, Laurent Vermue"
 AUTHOR_MAILS = "<andba@dtu.dk>, <lauve@dtu.dk>"
 LICENSE = 'new BSD'
@@ -67,10 +67,12 @@ def setup_package():
                   'sphinx_rtd_theme',
                   'nbsphinx',
                   'nbsphinx_link'
-                    ]
+                    ],
+              'plotting': [
+                  'matplotlib'],
           },
           python_requires='>=3.5',
           )
 
-if __name__ == 'main':
+if __name__ == '__main__':
     setup_package()

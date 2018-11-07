@@ -28,6 +28,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+doc/build/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -68,7 +69,7 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+doc/build/
 
 # PyBuilder
 target/
