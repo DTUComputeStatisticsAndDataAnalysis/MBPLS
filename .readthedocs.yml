@@ -6,6 +6,7 @@ python:
   use_system_site_packages: true
   setup_py_install: true
   pip_install: true
+  requirements_file: requirements.txt
   extra_requirements:
     - docs
     - tests
