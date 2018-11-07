@@ -41,7 +41,7 @@ def load_Intro_Data():
         else:
             print('File {0} was not available and could not be downloaded'.format(file))
 
-    print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
+    print("Following dataset were loaded as Pandas Dataframes: \n", file_dict.keys())
     return file_dict
 
 
@@ -57,7 +57,7 @@ def load_FTIR_Data():
         else:
             print('File {0} was not available and could not be downloaded'.format(file))
 
-    print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
+    print("Following dataset were loaded as Pandas Dataframes: \n", file_dict.keys())
     return file_dict
 
 def load_CarbohydrateMicroarrays_Data():
@@ -72,7 +72,7 @@ def load_CarbohydrateMicroarrays_Data():
         else:
             print('File {0} was not available and could not be downloaded'.format(file))
 
-    print("Following dataset were loaded as Pandas Dataframes: ", file_dict.keys())
+    print("Following dataset were loaded as Pandas Dataframes: \n", file_dict.keys())
     return file_dict
 
 def path_checker(path):
@@ -126,14 +126,18 @@ def orthogonal_data(num_of_samples = 11, params_block_one = 4, params_block_two 
     params_block_one: Number of variables in the first block
     params_block_two: Number of variables in the second block
     params_block_three: Number of variables in the third block
-    num_of_variables_main_lin_comb: Number of variables that are randon linear combinations of each variable (Multi-Colliniearity)
+    num_of_variables_main_lin_comb: Number of variables that are randon linear combinations of each variable
+    (Multi-Colliniearity)
     num_of_batches: Number of batches for each block (third dimension)
 
     Output:
     --------------
-    X_1 = First X-block - Dimensionality ( num_of_samples, params_block_one*(num_of_variables_main_lin_comb+1), num_of_batches)
-    X_2 = Second X-block - Dimensionality ( num_of_samples, params_block_two*(num_of_variables_main_lin_comb+1), num_of_batches)
-    X_3 = Third X-block - Dimensionality ( num_of_samples, params_block_three*(num_of_variables_main_lin_comb+1), num_of_batches)
+    X_1 = First X-block - Dimensionality ( num_of_samples, params_block_one*(num_of_variables_main_lin_comb+1),
+    num_of_batches)
+    X_2 = Second X-block - Dimensionality ( num_of_samples, params_block_two*(num_of_variables_main_lin_comb+1),
+    num_of_batches)
+    X_3 = Third X-block - Dimensionality ( num_of_samples, params_block_three*(num_of_variables_main_lin_comb+1),
+    num_of_batches)
     Y = Y-block - Dimensionality (num_of_samples, 2, num_of_batches)
     """
     # TODO: X = y * weight_vector

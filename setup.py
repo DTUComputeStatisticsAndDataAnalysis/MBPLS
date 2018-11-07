@@ -59,6 +59,16 @@ def setup_package():
               'scipy>={0}'.format(SCIPY_MIN_VERSION),
               'scikit-learn>={0}'.format(SCIKIT_LEARN_MIN_VERSION)
                 ],
+          extras_require={
+              'tests': [
+                  'pytest'],
+              'docs': [
+                  'sphinx >= 1.6',
+                  'sphinx_rtd_theme',
+                  'nbsphinx',
+                  'nbsphinx_link'
+                    ]
+          },
           python_requires='>=3.5',
           )
 

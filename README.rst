@@ -73,4 +73,4 @@ The mbpls package for Multiblock Partial Least Sqaures (MB-PLS) prediction model
    mbpls.plot(num_components=3)
 
 More elaborate (real-world) examples can be found at
-https://github.com/b0nsaii/MBPLS/tree/master/examples
+https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/examples
