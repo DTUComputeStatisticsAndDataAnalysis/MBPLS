@@ -85,5 +85,6 @@ The mbpls package for Multiblock Partial Least Sqaures (MB-PLS) prediction model
    # Use built-in plot method for exploratory analysis of multiblock pls models
    mbpls.plot(num_components=3)
 
-More elaborate (real-world) examples can be found at
+The documentation is available at https://mbpls.readthedocs.io
+and elaborate (real-world) Jupyter Notebook examples can be found at
 https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/examples
