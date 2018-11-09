@@ -19,7 +19,7 @@ prediction modelling of univariate or multivariate outcomes. Four state
 of the art algorithms have been implemented and optimized for robust
 performance on large data matrices. The package has been designed to be
 able to handle missing data, such that application is straight forward
-using the commonly known Scikit-Learn API and its model selection
+using the commonly known Scikit-learn API and its model selection
 toolbox.
 
 Installation
@@ -58,7 +58,7 @@ Use the mbpls package for Partial Least Squares (PLS) prediction modeling
    pls.fit(x,y)
    y_pred = pls.predict(x)
 
-The mbpls package for Multiblock Partial Least Sqaures (MB-PLS) prediction modeling
+The mbpls package for Multiblock Partial Least Squares (MB-PLS) prediction modeling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: python
