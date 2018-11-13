@@ -110,7 +110,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         
         .. math::
             
-            X_k = X_{k-1} - t_k p_k^T
+            X_{k+1} = X_{k} - t_k p_k^T
             
         
         **PLS1**: Matrices are computed such that:
@@ -130,21 +130,64 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             Y &= U V^T + E_Y
             
             Y &= X \\beta + E
-            
-        **MBPLS**: In addition, MBPLS provides a measure for how important (:math:`a_{ik}`) each block :math:`X_i` is 
+
+
+        **MBPLS**: In addition, MBPLS provides a measure for how important (:math:`a_{ik}`) each block :math:`X_i` is
         for prediction of :math:`Y` in the :math:`k`-th LV. Matrices are computed such that:
-        
+
         .. math::
-            
+
             X &= [X_1|X_2|...|X_i]
-            
-            X_i &= T_s P_i^T + E_i
-            
+
+            X_i &= T_s P_i ^T + E_i
+
             Y &= U V^T + E_Y
-            
-            a_{ik} &= ||w_{ik}||_2^2
-            
+
             Y &= X \\beta + E
+
+        using the following calculation:
+
+        :math:`X_k = X`
+
+        for k in K:
+
+        .. math::
+
+              w_{k} &= \\text{first eigenvector of } X_k^T Y Y^T X_k, ||w_k||_2 = 1
+
+              w_{k} &= [w_{1k}|w_{2k}|...|w_{ik}]
+
+              a_{ik} &= ||w_{ik}||_2 ^2
+
+              t_{ik} &= \\frac{X_i w_{ik}}{||w_{ik}||_2}
+
+              t_{sk} &= \\sum{a_{ik} * t_{ik}}
+
+              v_k &= \\frac{Y^T t_{sk}}{t_{sk} ^T t_{sk}}
+
+              u_k &= Y v_k
+
+              u_k &= \\frac{u_k}{||u_k||_2}
+
+              p_k &= \\frac{X^T t_{sk}}{t_{sk} ^T t_{sk}}, p_k = [p_{1k}|p_{2k}|...|p_{ik}]
+
+              X_{k+1} &= X_k - t_{sk} p_k
+
+        End loop
+
+        :math:`P = [p_{1}|p_{2}|...|p_{K}]`
+
+        :math:`T_{s} = [t_{s1}|t_{s2}|...|t_{sK}]`
+
+        :math:`U = [u_{1}|u_{2}|...|u_{K}]`
+
+        :math:`V = [v_{1}|v_{2}|...|v_{K}]`
+
+        :math:`W = [w_{1}|w_{2}|...|w_{k}]`
+
+        :math:`R = W (P^T W)^{-1}`
+
+        :math:`\\beta = R V^T`
                
         
         Examples
