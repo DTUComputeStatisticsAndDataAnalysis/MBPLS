@@ -21,7 +21,7 @@ all = ['data_path',
        'load_FTIR_Data',
        'load_CarbohydrateMicroarrays_Data']
 
-GITHUB_DATADIR = 'https://github.com/b0nsaii/MBPLS/raw/Package_OOP/mbpls/data'
+GITHUB_DATADIR = 'https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/mbpls/data'
 
 def data_path():
     path = os.path.dirname(os.path.abspath(__file__))

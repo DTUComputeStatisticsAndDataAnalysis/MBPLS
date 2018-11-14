@@ -1,13 +1,12 @@
 language: python
 
 os:
-  - windows
   - linux
-  - osx
 
 python:
   - "3.5"
   - "3.6"
+  - "3.7"
 
 git:
   depth: false

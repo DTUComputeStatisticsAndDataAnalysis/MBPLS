@@ -85,7 +85,7 @@ TEST_FILES = ['P1_KERNEL.csv',
               'U_test_NlargerP_KERNEL.csv'
               ]
 
-GITHUB_TESTDIR = 'https://github.com/b0nsaii/MBPLS/raw/Package_OOP/mbpls/tests'
+GITHUB_TESTDIR = 'https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/mbpls/tests'
 
 def data_path():
     path = os.path.dirname(os.path.abspath(__file__))
