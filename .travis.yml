@@ -34,13 +34,8 @@ branches:
   only:
   - master
 
-before_install:
-  - ./.travis/install.sh
-
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      source activate testenvironment ;
-    fi ;
+  - ./.travis/install.sh
   - pip install -r requirements.txt
   - pip install .
 
