@@ -52,7 +52,7 @@ def setup_package():
                        'Programming Language :: Python :: 3.5',
                        'Programming Language :: Python :: 3.6',
                        'Programming Language :: Python :: 3.7',
-                       'Development Status :: 3 - Alpha'
+                       'Development Status :: 5 - Production/Stable'
                        ],
           install_requires=[
               'numpy>={0}'.format(NUMPY_MIN_VERSION),
