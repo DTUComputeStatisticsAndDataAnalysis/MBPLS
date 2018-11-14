@@ -38,10 +38,10 @@ before_install:
   - ./.travis/install.sh
 
 install:
+  - export PATH="$HOME/miniconda/bin:$PATH"
   - source activate testenvironment
-  - which python
-  - pip show pip
   - pip install -r requirements.txt
   - pip install .
 
-script: pytestgi
+script: pytest
+
