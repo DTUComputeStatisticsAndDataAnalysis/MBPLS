@@ -23,6 +23,7 @@ LICENSE = 'new BSD'
 NUMPY_MIN_VERSION = '1.13.3'
 SCIPY_MIN_VERSION = '1.0.0'
 SCIKIT_LEARN_MIN_VERSION = '0.20.0'
+PANDAS_MIN_VERSION = '0.20.0'
 
 def setup_package():
     with open('README.rst') as f:
@@ -58,7 +59,8 @@ def setup_package():
           install_requires=[
               'numpy>={0}'.format(NUMPY_MIN_VERSION),
               'scipy>={0}'.format(SCIPY_MIN_VERSION),
-              'scikit-learn>={0}'.format(SCIKIT_LEARN_MIN_VERSION)
+              'scikit-learn>={0}'.format(SCIKIT_LEARN_MIN_VERSION),
+              'pandas>={0}'.format(PANDAS_MIN_VERSION)
                 ],
           extras_require={
               'tests': [
@@ -71,7 +73,6 @@ def setup_package():
                     ],
               'extras': [
                   'matplotlib',
-                  'pandas'
               ],
           },
           python_requires='>=3.5',
