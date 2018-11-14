@@ -18,8 +18,8 @@ The aim of the package is to provide a unified interface and easy access to thes
 #
 # License: 3-clause BSD
 
-from . import mbpls, data, tests
+from . import mbpls, data
 
 __all__ = ["mbpls", "data"]
 
-__version__ = "1.0.7b1"
+__version__ = "1.0.8b1"
