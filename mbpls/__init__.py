@@ -20,6 +20,6 @@ The aim of the package is to provide a unified interface and easy access to thes
 
 from . import mbpls, data, tests
 
-__all__ = ["mbpls", "data", "tests"]
+__all__ = ["mbpls", "data"]
 
 __version__ = "1.0.7b1"
