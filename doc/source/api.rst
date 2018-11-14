@@ -5,7 +5,7 @@ API Reference
     :undoc-members:
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 2
 
     mbpls
     mbpls.data
