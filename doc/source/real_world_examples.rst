@@ -1,4 +1,4 @@
-Real world examples
+Real World Examples
 -------------------
 
 .. toctree::
@@ -6,5 +6,5 @@ Real world examples
     :titlesonly:
 
     MBPLS Pectinyield <examples/real_world_applications/PectinYield_MBPLS>
-    PLS Cardobhydrate Microarray <examples/real_world_applications/Carbohydrate_Microarray_PLS>
+    PLS Carbohydrate Microarray <examples/real_world_applications/Carbohydrate_Microarray_PLS>
     PLS FTIR <examples/real_world_applications/FTIR_PLS>

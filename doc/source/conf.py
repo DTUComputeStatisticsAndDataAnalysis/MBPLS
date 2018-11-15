@@ -138,12 +138,17 @@ latex_elements = {
 
     # Additional stuff for the LaTeX preamble.
     #
-    # 'preamble': '',
+    'preamble': r'''
+\usepackage{hyperref}
+\usepackage{svg}
+    ''',
+    'extraclassoptions': 'openany',
 
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
 }
+
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
