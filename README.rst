@@ -22,6 +22,10 @@ able to handle missing data, such that application is straight forward
 using the commonly known Scikit-learn API and its model selection
 toolbox.
 
+The documentation is available at https://mbpls.readthedocs.io
+and elaborate (real-world) Jupyter Notebook examples can be found at
+https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/examples
+
 Installation
 ------------
 
@@ -84,7 +88,3 @@ The mbpls package for Multiblock Partial Least Squares (MB-PLS) prediction model
 
    # Use built-in plot method for exploratory analysis of multiblock pls models
    mbpls.plot(num_components=3)
-
-The documentation is available at https://mbpls.readthedocs.io
-and elaborate (real-world) Jupyter Notebook examples can be found at
-https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/examples
