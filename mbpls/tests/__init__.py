@@ -14,7 +14,6 @@ source code of the implemented algorithms.
 #
 # License: 3-clause BSD
 
-from . import test_Installation
+from . import test_mbpls
 
-__all__ = ["test_Installation"
-           ]
+__all__ = ["test_mbpls.py"]
