@@ -35,7 +35,15 @@ principal components can be interpreted for a PCA analysis.
 Multivariate data is often structured in blocks, e.g. $\textbf{X}_1$, $\textbf{X}_2$, ... , $\textbf{X}_i$.
 This could mean that one has obtained data from two different analytic methodologies for a similar set of samples,
 which may indicate two totally independent feature spaces. In such cases it is often important to understand how each
-data block contributes to the prediction of $\textbf{Y}$. Several Data Fusion approaches were proposed to establish
+data block contributes to the prediction of $\textbf{Y}$. Examples for data measured in blocks could be the following.  
+
+1. It can be of interest to relate patient clinical records to data obtained through different high-throughput omics measurements. These data could typically be structured in blocks referring to genomics, transciptomics, proteomics, metabolomics etc.
+
+2. Spectroscopic methods are useful to predict and assure food quality parameters. When measuring food samples by several different spectroscopic methods, e.g. by applying near infrared and UV-vis spectroscopy, it is meaningful to combine the data blocks to obtain reliable prediction models.
+
+3. A process utilizing fermentation technology is typically carried out in several sequential production phases, i.e. seed and main fermentation phase. If sensor data is available for all production phases it is meaningful to include these as individual data blocks when establishing prediction models for quality control parameters, such as product yield.
+
+Several Data Fusion approaches were proposed to establish
 combined prediction models from such multiblock data [@li:16]. One of the proposed methods is
 Multiblock-PLS (MB-PLS) [@westerhuis:98]. It is closely related to PLS regression, but instead of obtaining an 
 interpretative model for the entire (concatenated) data matrix $\textbf{X}$ one obtains model parameters for each 
