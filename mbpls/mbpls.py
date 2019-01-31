@@ -1017,7 +1017,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
         else:
             raise NameError('Method you called is unknown')
 
-    def transform(self, X, Y=None):
+    def transform(self, X, Y=None, return_block_scores=False):
         """ Obtain scores based on the fitted model
 
          Parameters
@@ -1026,6 +1026,8 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
             of arrays containing all xblocks x1, x2, ..., xn. Rows are observations, columns are features/variables
         (optional) Y : array
             1-dim or 2-dim array of reference values
+        return_block_scores: bool (default False)
+            Returning block scores T_ when transforming the data
 
         Returns
         ----------
@@ -1120,7 +1122,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                         U_ = temp_scores
                     else:
                         U_ = Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
-                    return Ts_, T_ , U_
+                    if return_block_scores:
+                        return Ts_, T_, U_
+                    else:
+                        return Ts_, U_
                 else:
                     # Calculate Y scores
                     if self.sparse_data:
@@ -1165,7 +1170,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                                     T_[block] = np.hstack((T_[block], temp_scores))
                                 else:
                                     T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp+1])))
-                    return Ts_, T_
+                    if return_block_scores:
+                        return Ts_, T_
+                    else:
+                        return Ts_
                 else:
                     return Ts_
 
@@ -1243,7 +1251,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                     U_ = temp_scores
                 else:
                     U_ = Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
-                return Ts_, T_, U_, T_
+                if return_block_scores:
+                    return Ts_, T_, U_
+                else:
+                    return Ts_, U_
             else:
                 # Here the block scores are calculated iteratively for new blocks
                 T_ = []
@@ -1274,7 +1285,10 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
                                 T_[block] = np.hstack((T_[block], temp_scores))
                             else:
                                 T_[block] = np.hstack((T_[block], X[block].dot(self.W_[block][:, comp:comp + 1])))
-                return Ts_, T_
+                if return_block_scores:
+                    return Ts_, T_
+                else:
+                    return Ts_
 
     def predict(self, X):
         """Predict y based on the fitted model

@@ -73,7 +73,7 @@ def test_full_svd():
             A_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'A_%s.csv' % method), delimiter=',')
             assert(np.allclose(A, A_ref))
 
-            Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
+            Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test, return_block_scores=True)
             T_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'T_test_%s.csv' % method), delimiter=',')
             T_test = np.concatenate(T_test, axis=1)
             assert(np.allclose(abs(T_test), abs(T_test_ref)))
@@ -112,7 +112,8 @@ def test_full_svd():
 
 
         y_predict = mbpls_model.predict([x1_test, x2_test])
-        y_predict_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Y_predict_test_%s.csv' % method), delimiter=',')
+        y_predict_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Y_predict_test_%s.csv' % method),
+                                      delimiter=',')
         assert(np.allclose(y_predict, y_predict_ref))
 
         predictions.append(y_predict)
@@ -164,7 +165,7 @@ def test_sparsesvd():
             A_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'A_%s.csv' % method), delimiter=',')
             assert(np.allclose(A, A_ref))
 
-            Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
+            Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test, return_block_scores=True)
             T_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'T_test_%s.csv' % method), delimiter=',')
             T_test = np.concatenate(T_test, axis=1)
             assert(np.allclose(abs(T_test), abs(T_test_ref)))
@@ -203,7 +204,8 @@ def test_sparsesvd():
 
 
         y_predict = mbpls_model.predict([x1_test, x2_test])
-        y_predict_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Y_predict_test_%s.csv' % method), delimiter=',')
+        y_predict_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Y_predict_test_%s.csv' % method),
+                                      delimiter=',')
         assert(np.allclose(y_predict, y_predict_ref))
 
         predictions.append(y_predict)
@@ -264,17 +266,20 @@ def test_full_svd_NlargerP():
             A_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'A_NlargerP_%s.csv' % method), delimiter=',')
             assert(np.allclose(A, A_ref))
 
-            Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
-            T_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'T_test_NlargerP_%s.csv' % method), delimiter=',')
+            Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test, return_block_scores=True)
+            T_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'T_test_NlargerP_%s.csv' % method),
+                                       delimiter=',')
             T_test = np.concatenate(T_test, axis=1)
             assert(np.allclose(abs(T_test), abs(T_test_ref)))
 
         else:
             Ts_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
 
-        Ts_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Ts_test_NlargerP_%s.csv' % method), delimiter=',')
+        Ts_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Ts_test_NlargerP_%s.csv' % method),
+                                    delimiter=',')
         assert(np.allclose(abs(Ts_test), abs(Ts_test_ref)))
-        U_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'U_test_NlargerP_%s.csv' % method), delimiter=',')
+        U_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'U_test_NlargerP_%s.csv' % method),
+                                   delimiter=',')
         assert(np.allclose(abs(U_test), abs(U_test_ref)))
 
         P1 = mbpls_model.P_[0]
@@ -303,7 +308,8 @@ def test_full_svd_NlargerP():
 
 
         y_predict = mbpls_model.predict([x1_test, x2_test])
-        y_predict_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Y_predict_test_NlargerP_%s.csv' % method), delimiter=',')
+        y_predict_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Y_predict_test_NlargerP_%s.csv' % method),
+                                      delimiter=',')
         assert(np.allclose(y_predict, y_predict_ref))
 
         predictions.append(y_predict)
@@ -362,17 +368,20 @@ def test_sparsesvd_NlargerP():
             A_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'A_NlargerP_%s.csv' % method), delimiter=',')
             assert(np.allclose(A, A_ref))
 
-            Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
-            T_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'T_test_NlargerP_%s.csv' % method), delimiter=',')
+            Ts_test, T_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test, return_block_scores=True)
+            T_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'T_test_NlargerP_%s.csv' % method),
+                                       delimiter=',')
             T_test = np.concatenate(T_test, axis=1)
             assert(np.allclose(abs(T_test), abs(T_test_ref)))
 
         else:
             Ts_test, U_test = mbpls_model.transform([x1_test, x2_test], y_test)
 
-        Ts_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Ts_test_NlargerP_%s.csv' % method), delimiter=',')
+        Ts_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Ts_test_NlargerP_%s.csv' % method),
+                                    delimiter=',')
         assert(np.allclose(abs(Ts_test), abs(Ts_test_ref)))
-        U_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'U_test_NlargerP_%s.csv' % method), delimiter=',')
+        U_test_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'U_test_NlargerP_%s.csv' % method),
+                                   delimiter=',')
         assert(np.allclose(abs(U_test), abs(U_test_ref)))
 
         P1 = mbpls_model.P_[0]
@@ -401,7 +410,8 @@ def test_sparsesvd_NlargerP():
 
 
         y_predict = mbpls_model.predict([x1_test, x2_test])
-        y_predict_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Y_predict_test_NlargerP_%s.csv' % method), delimiter=',')
+        y_predict_ref = np.genfromtxt(os.path.join(test_dir, 'test_data', 'Y_predict_test_NlargerP_%s.csv' % method),
+                                      delimiter=',')
         assert(np.allclose(y_predict, y_predict_ref))
 
         predictions.append(y_predict)
@@ -409,3 +419,11 @@ def test_sparsesvd_NlargerP():
     # Assert that all methods agree in prediction
     for prediction in predictions:
         assert(np.allclose(predictions[0], prediction, atol=1e-3))
+
+
+def test_sklearn_compatibility():
+    from sklearn.utils.estimator_checks import check_estimator
+    from mbpls.mbpls import MBPLS
+    # Tell Scikit-learn that MBPLS performs like PLS with multiple outputs when calling the transform method
+    MBPLS.__name__ = 'PLSRegression'
+    check_estimator(MBPLS)
