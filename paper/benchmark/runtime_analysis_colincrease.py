@@ -74,6 +74,9 @@ verbosity_level = 4 #higher verbosity levels includer lower ones
 # Calculation Measurements
 include_timing = True
 
+# Plot timing graphs in the end
+plot_results = True
+
 # Datasets
 x_sizes = np.arange(1000, 1001, 1000)
 y_sizes = np.arange(100, 20001, 100)
@@ -235,3 +238,37 @@ while not finished:
     pickle.dump(indicator_matrix_shared, open('indicator_matrix_colincrease.pkl', 'wb'))
     pickle.dump(timing_results_shared, open('timing_results_colincrease.pkl', 'wb'))
 
+# Generate the plot of the runtimes (Not shown in the paper)
+if plot_results:
+    import matplotlib
+    matplotlib.rc('text', usetex=True)
+    matplotlib.rcParams['text.latex.preamble'] = [r"\usepackage{amsmath}"]
+    import matplotlib.pyplot as plt
+    timing_mean = timing_results.min(axis=3)
+
+    # Only include those results with runtimes lower than 1000 seconds in average
+    Ade4 = timing_mean[0, timing_mean[0, :, 0] < 1000, 0]
+    UNIPALS = timing_mean[1, timing_mean[1, :, 0] < 1000, 0]
+    KERNEL = timing_mean[2, timing_mean[2, :, 0] < 1000, 0]
+    NIPALS = timing_mean[3, timing_mean[3, :, 0] < 1000, 0]
+    SIMPLS = timing_mean[4, timing_mean[4, :, 0] < 1000, 0]
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(Ade4, 'b--', label=r'Ade4 ($P>N$)')
+    plt.plot(UNIPALS, 'c', label='UNIPALS with fixed samples')
+    plt.plot(KERNEL, 'g', label='KERNEL with fixed samples')
+    plt.plot(NIPALS, 'r', label='NIPALS with fixed samples')
+    plt.plot(SIMPLS, 'm', label='SIMPLS with fixed samples\n(Non-Multiblock')
+    plt.legend(fontsize=13, loc=(0.1, 0.45))
+    plt.xlabel(r'Number of samples $N$ in $\boldsymbol{X}$', fontsize=14)
+    plt.ylabel('Time in seconds', fontsize=14)
+    plt.ylim((0, 15))
+    plt.xlim(0, 199)
+    xticks = np.arange(-1, 200, 50)
+    xticks[0] = -1
+    xlabels = xticks*100 + 100
+    xlabels[0] = 100
+    plt.xticks(xticks, xlabels, fontsize=13)
+    plt.yticks(fontsize=13)
+    plt.tight_layout()
+    plt.show()
