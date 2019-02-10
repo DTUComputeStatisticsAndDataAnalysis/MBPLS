@@ -13,6 +13,9 @@ Multiblock Partial Least Squares Package
 .. image:: https://readthedocs.org/projects/mbpls/badge/?version=latest
     :target: https://mbpls.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
+.. image:: http://joss.theoj.org/papers/10.21105/joss.01190/status.svg
+   :target: https://doi.org/10.21105/joss.01190
+   :alt: JOSS Paper DOI
 
 An easy to use Python package for (Multiblock) Partial Least Squares
 prediction modelling of univariate or multivariate outcomes. Four state
