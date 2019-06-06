@@ -29,6 +29,12 @@ The documentation is available at https://mbpls.readthedocs.io
 and elaborate (real-world) Jupyter Notebook examples can be found at
 https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/examples
 
+This package can be cited using the following reference. 
+
+*Baum et al., (2019). Multiblock PLS: Block dependent prediction modeling for Python. Journal of Open Source Software, 4(34), 1190*
+
+
+
 Installation
 ------------
 
