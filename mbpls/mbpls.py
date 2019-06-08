@@ -7,7 +7,7 @@
 # License: 3-clause BSD
 
 
-from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin
+from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin, MultiOutputMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted, check_consistent_length
 from sklearn import metrics
 import numpy as np
@@ -18,7 +18,7 @@ from warnings import warn
 __all__ = ['MBPLS']
 
 
-class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin):
+class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin, MultiOutputMixin):
     """(Multiblock) PLS regression for predictive modelling using latent variables
         --------------------------------------------------------------------------
         

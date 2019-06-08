@@ -22,7 +22,7 @@ LICENSE = 'new BSD'
 # This is the lowest tested version. Below might work as well
 NUMPY_MIN_VERSION = '1.13.3'
 SCIPY_MIN_VERSION = '1.0.0'
-SCIKIT_LEARN_MIN_VERSION = '0.20.0'
+SCIKIT_LEARN_MIN_VERSION = '0.21.2'
 PANDAS_MIN_VERSION = '0.20.0'
 
 def setup_package():
