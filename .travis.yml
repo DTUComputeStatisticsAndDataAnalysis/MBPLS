@@ -29,11 +29,6 @@ matrix:
 git:
   depth: false
 
-# safelist
-branches:
-  only:
-  - master
-
 before_install:
   - ./.travis/install.sh
 

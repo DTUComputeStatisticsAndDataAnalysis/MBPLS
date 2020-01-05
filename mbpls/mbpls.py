@@ -18,7 +18,7 @@ from warnings import warn
 __all__ = ['MBPLS']
 
 
-class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin, MultiOutputMixin):
+class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
     """(Multiblock) PLS regression for predictive modelling using latent variables
         --------------------------------------------------------------------------
         
