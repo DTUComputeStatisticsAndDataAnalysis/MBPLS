@@ -51,6 +51,26 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin, MultiOutputMixin):
         max_tol : non-negative float (default 1e-14)
             Maximum tolerance allowed when using the iterative NIPALS algorithm
 
+        nipals_convergence_norm : {non-zero int, inf, -inf, 'fro', 'nuc'} (default 2)
+            Order of the norm that is used to calculate the difference of the superscore vectors between subsequent
+            iterations of the NIPALS algorithm. Following orders are available:
+
+            =====  ============================  ==========================
+            ord    norm for matrices             norm for vectors
+            =====  ============================  ==========================
+            None   Frobenius norm                2-norm
+            'fro'  Frobenius norm                --
+            'nuc'  nuclear norm                  --
+            inf    max(sum(abs(x), axis=1))      max(abs(x))
+            -inf   min(sum(abs(x), axis=1))      min(abs(x))
+            0      --                            sum(x != 0)
+            1      max(sum(abs(x), axis=0))      as below
+            -1     min(sum(abs(x), axis=0))      as below
+            2      2-norm (largest sing. value)  as below
+            -2     smallest singular value       as below
+            other  --                            sum(abs(x)**ord)**(1./ord)
+            =====  ============================  ==========================
+
         calc_all : bool (default True)
             Calculate all internal attributes for the used method. Some methods do not need to calculate all attributes,
             i.e. scores, weights etc., to obtain the regression coefficients used for prediction. Setting this parameter
@@ -216,13 +236,14 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin, MultiOutputMixin):
         https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/examples
     """
 
-    def __init__(self, n_components=2, full_svd=False, method='NIPALS', standardize=True, max_tol=1e-14, calc_all=True,
-                 sparse_data=False):
+    def __init__(self, n_components=2, full_svd=False, method='NIPALS', standardize=True, max_tol=1e-14,
+                 nipals_convergence_norm=2, calc_all=True, sparse_data=False):
         self.n_components = n_components
         self.full_svd = full_svd
         self.method = method
         self.standardize = standardize
         self.max_tol = max_tol
+        self.nipals_convergence_norm = nipals_convergence_norm
         self.calc_all = calc_all
         self.sparse_data = sparse_data
 
@@ -852,7 +873,7 @@ class MBPLS(BaseEstimator, TransformerMixin, RegressorMixin, MultiOutputMixin):
                     if run == 1:
                         pass
                     else:
-                        diff_t = np.sum(superscores_old - superscores)
+                        diff_t = np.linalg.norm((superscores_old - superscores), ord=self.nipals_convergence_norm)
                     superscores_old = np.copy(superscores)
                     # 6. Regress superscores agains Y_calc
                     if self.sparse_data:
