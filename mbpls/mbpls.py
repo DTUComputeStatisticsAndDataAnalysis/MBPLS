@@ -51,6 +51,26 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
         max_tol : non-negative float (default 1e-14)
             Maximum tolerance allowed when using the iterative NIPALS algorithm
 
+        nipals_convergence_norm : {non-zero int, inf, -inf, 'fro', 'nuc'} (default 2)
+            Order of the norm that is used to calculate the difference of the superscore vectors between subsequent
+            iterations of the NIPALS algorithm. Following orders are available:
+
+            =====  ============================  ==========================
+            ord    norm for matrices             norm for vectors
+            =====  ============================  ==========================
+            None   Frobenius norm                2-norm
+            'fro'  Frobenius norm                --
+            'nuc'  nuclear norm                  --
+            inf    max(sum(abs(x), axis=1))      max(abs(x))
+            -inf   min(sum(abs(x), axis=1))      min(abs(x))
+            0      --                            sum(x != 0)
+            1      max(sum(abs(x), axis=0))      as below
+            -1     min(sum(abs(x), axis=0))      as below
+            2      2-norm (largest sing. value)  as below
+            -2     smallest singular value       as below
+            other  --                            sum(abs(x)**ord)**(1./ord)
+            =====  ============================  ==========================
+
         calc_all : bool (default True)
             Calculate all internal attributes for the used method. Some methods do not need to calculate all attributes,
             i.e. scores, weights etc., to obtain the regression coefficients used for prediction. Setting this parameter
@@ -62,7 +82,11 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
             allowed.
             Without setting this parameter to 'True', sparse data will not be accepted.
 
-        
+        copy : bool (default True)
+            Whether the deflation should be done on a copy. Not using a copy might alter the input data and have
+            unforeseeable consequences.
+
+
         Model attributes after fitting
         ------------------------------
 
@@ -96,7 +120,6 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
         V_ : array, loadings :math:`[q,k]`
         
         explained_var_y_ : list, explained variance in :math:`Y` :math:`[k]`
-        
         
 
         Notes
@@ -216,15 +239,17 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
         https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/examples
     """
 
-    def __init__(self, n_components=2, full_svd=False, method='NIPALS', standardize=True, max_tol=1e-14, calc_all=True,
-                 sparse_data=False):
+    def __init__(self, n_components=2, full_svd=False, method='NIPALS', standardize=True, max_tol=1e-14,
+                 nipals_convergence_norm=2, calc_all=True, sparse_data=False, copy=True):
         self.n_components = n_components
         self.full_svd = full_svd
         self.method = method
         self.standardize = standardize
         self.max_tol = max_tol
+        self.nipals_convergence_norm = nipals_convergence_norm
         self.calc_all = calc_all
         self.sparse_data = sparse_data
+        self.copy = copy
 
     def check_sparsity_level(self, data):
         total_rows, total_columns = data.shape
@@ -264,7 +289,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                 self.method = 'NIPALS'
 
         global U_, T_, R_
-        Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data)
+        Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data, copy=self.copy)
         if self.sparse_data is True:
             self.sparse_Y_info_ = {}
             self.sparse_Y_info_['Y'] = self.check_sparsity_level(Y)
@@ -279,14 +304,15 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                     self.x_scalers_.append(StandardScaler(with_mean=True, with_std=True))
                     # Check dimensions
                     check_consistent_length(X[block], Y)
-                    X[block] = check_array(X[block], dtype=np.float64, copy=True, force_all_finite=not self.sparse_data)
+                    X[block] = check_array(X[block], dtype=np.float64, copy=self.copy,
+                                           force_all_finite=not self.sparse_data)
                     if self.sparse_data is True:
                         self.sparse_X_info_[block] = self.check_sparsity_level(X[block])
                     X[block] = self.x_scalers_[block].fit_transform(X[block])
             else:
                 self.x_scalers_.append(StandardScaler(with_mean=True, with_std=True))
                 # Check dimensions
-                X = check_array(X, dtype=np.float64, copy=True, force_all_finite=not self.sparse_data)
+                X = check_array(X, dtype=np.float64, copy=self.copy, force_all_finite=not self.sparse_data)
                 if self.sparse_data is True:
                     self.sparse_X_info_ = {}
                     self.sparse_X_info_[0] = self.check_sparsity_level(X)
@@ -302,12 +328,13 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                 for block in range(len(X)):
                     # Check dimensions
                     check_consistent_length(X[block], Y)
-                    X[block] = check_array(X[block], dtype=np.float64, copy=True, force_all_finite=not self.sparse_data)
+                    X[block] = check_array(X[block], dtype=np.float64, copy=self.copy,
+                                           force_all_finite=not self.sparse_data)
                     if self.sparse_data is True:
                         self.sparse_X_info_[block] = self.check_sparsity_level(X[block])
             else:
                 # Check dimensions
-                X = check_array(X, dtype=np.float64, copy=True, force_all_finite=not self.sparse_data)
+                X = check_array(X, dtype=np.float64, copy=self.copy, force_all_finite=not self.sparse_data)
                 if self.sparse_data is True:
                     self.sparse_X_info_ = {}
                     self.sparse_X_info_[0] = self.check_sparsity_level(X)
@@ -852,7 +879,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                     if run == 1:
                         pass
                     else:
-                        diff_t = np.sum(superscores_old - superscores)
+                        diff_t = np.linalg.norm((superscores_old - superscores), ord=self.nipals_convergence_norm)
                     superscores_old = np.copy(superscores)
                     # 6. Regress superscores agains Y_calc
                     if self.sparse_data:
@@ -1017,27 +1044,35 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
         else:
             raise NameError('Method you called is unknown')
 
-    def transform(self, X, Y=None, return_block_scores=False):
+    def transform(self, X, Y=None, return_block_scores=False, copy=True):
         """ Obtain scores based on the fitted model
+
 
          Parameters
         ----------
         X : list
             of arrays containing all xblocks x1, x2, ..., xn. Rows are observations, columns are features/variables
+
         (optional) Y : array
             1-dim or 2-dim array of reference values
+
         return_block_scores: bool (default False)
             Returning block scores T_ when transforming the data
+
+        copy : bool (default True)
+            Whether to perform in-place transformation. Not using a copy might alter the input data and have
+            unforeseeable consequences.
+
 
         Returns
         ----------
         Super_scores : np.array
 
         Block_scores : list
-        List of np.arrays containing the block scores
+            List of np.arrays containing the block scores
 
         Y_scores : np.array (optional)
-        Y-scores, if y was given
+            Y-scores, if y was given
         """
         check_is_fitted(self, 'beta_')
 
@@ -1049,13 +1084,13 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
             if isinstance(X, list) and not isinstance(X[0], list):
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data)
+                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
                     if self.sparse_data:
                         sparse_X_info_[block] = self.check_sparsity_level(X[block])
                     X[block] = self.x_scalers_[block].transform(X[block])
             else:
                 # Check dimensions
-                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)
+                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
                 if self.sparse_data:
                     sparse_X_info_[0] = self.check_sparsity_level(X)
                 X = [self.x_scalers_[0].transform(X)]
@@ -1075,7 +1110,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                 Ts_ = X_comp.dot(self.R_)
 
             if Y is not None:
-                Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data)
+                Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data, copy=copy)
                 if self.sparse_data:
                     sparse_Y_info_['Y'] = self.check_sparsity_level(Y)
                 if Y.ndim == 1:
@@ -1181,12 +1216,12 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
             if isinstance(X, list) and not isinstance(X[0], list):
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data)
+                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
                     if self.sparse_data:
                         sparse_X_info_[block] = self.check_sparsity_level(X[block])
             else:
                 # Check dimensions
-                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)
+                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
                 if self.sparse_data:
                     sparse_X_info_[0] = self.check_sparsity_level(X)
                 X = [X]
@@ -1206,7 +1241,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                 Ts_ = X_comp.dot(self.R_)
 
             if Y is not None:
-                Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data)
+                Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data, copy=copy)
                 if self.sparse_data:
                     sparse_Y_info_['Y'] = self.check_sparsity_level(Y)
                 if Y.ndim == 1:
@@ -1290,19 +1325,25 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                 else:
                     return Ts_
 
-    def predict(self, X):
+    def predict(self, X, copy=True):
         """Predict y based on the fitted model
+
 
         Parameters
         ----------
+
         X : list
             of all xblocks x1, x2, ..., xn. Rows are observations, columns are features/variables
+
+        copy : bool (default True)
+            Whether to perform in-place transformation. Not using a copy might alter the input data and have
+            unforeseeable consequences.
+
 
         Returns
         ----------
         y_hat : np.array
-        Predictions made based on trained model and supplied X
-
+            Predictions made based on trained model and supplied X
         """
         check_is_fitted(self, 'beta_')
 
@@ -1313,10 +1354,10 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
             if isinstance(X, list) and not isinstance(X[0], list):
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data)
+                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
                     X[block] = self.x_scalers_[block].transform(X[block])
             else:
-                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)
+                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
                 X = [self.x_scalers_[0].transform(X)]
 
 
@@ -1336,9 +1377,9 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
             if isinstance(X, list) and not isinstance(X[0], list):
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data)
+                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
             else:
-                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data)
+                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
                 X = [X]
             X = np.hstack(X)
             if self.sparse_data:
