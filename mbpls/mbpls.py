@@ -7,6 +7,7 @@
 # License: 3-clause BSD
 
 
+from copy import deepcopy
 from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin, MultiOutputMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted, check_consistent_length
 from sklearn import metrics
@@ -298,6 +299,8 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
         if self.standardize:
             self.x_scalers_ = []
             if isinstance(X, list) and not isinstance(X[0], list):
+                if self.copy:
+                    X = deepcopy(X)
                 if self.sparse_data is True:
                     self.sparse_X_info_ = {}
                 for block in range(len(X)):
@@ -323,6 +326,8 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
             Y = self.y_scaler_.fit_transform(Y)
         else:
             if isinstance(X, list) and not isinstance(X[0], list):
+                if self.copy:
+                    X = deepcopy(X)
                 if self.sparse_data is True:
                     self.sparse_X_info_ = {}
                 for block in range(len(X)):
@@ -1082,6 +1087,8 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
 
         if self.standardize:
             if isinstance(X, list) and not isinstance(X[0], list):
+                if copy:
+                    X = deepcopy(X)
                 for block in range(len(X)):
                     # Check dimensions
                     X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
@@ -1214,6 +1221,8 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
 
         else:
             if isinstance(X, list) and not isinstance(X[0], list):
+                if copy:
+                    X = deepcopy(X)
                 for block in range(len(X)):
                     # Check dimensions
                     X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
@@ -1352,6 +1361,8 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
 
         if self.standardize:
             if isinstance(X, list) and not isinstance(X[0], list):
+                if copy:
+                    X = deepcopy(X)
                 for block in range(len(X)):
                     # Check dimensions
                     X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
@@ -1375,6 +1386,8 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                 y_hat = self.y_scaler_.inverse_transform(X.dot(self.beta_))
         else:
             if isinstance(X, list) and not isinstance(X[0], list):
+                if copy:
+                    X = deepcopy(X)
                 for block in range(len(X)):
                     # Check dimensions
                     X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
