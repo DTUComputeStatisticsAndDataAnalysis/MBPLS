@@ -1,6 +1,7 @@
 BSD 3-Clause License
 
 Copyright (c) 2018, Andreas Baum and Laurent Vermue
+Copyright (c) 2026, Lukas Kopecky, Imperial College London
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

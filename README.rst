@@ -1,14 +1,12 @@
 Multiblock Partial Least Squares Package
 ========================================
 
-.. image:: https://img.shields.io/pypi/v/mbpls.svg
-    :target: https://pypi.python.org/pypi/mbpls
+
+.. image:: https://img.shields.io/pypi/v/multiblock-pls.svg
+    :target: https://pypi.org/project/multiblock-pls/
     :alt: Pypi Version
-.. image:: https://travis-ci.com/DTUComputeStatisticsAndDataAnalysis/MBPLS.svg?branch=master
-   :target: https://travis-ci.com/DTUComputeStatisticsAndDataAnalysis/MBPLS
-   :alt: Build Status
-.. image:: https://img.shields.io/pypi/l/mbpls.svg
-    :target: https://pypi.python.org/pypi/mbpls/
+.. image:: https://img.shields.io/pypi/l/multiblock-pls.svg
+    :target: https://pypi.python.org/pypi/multiblock-pls
     :alt: License
 .. image:: https://readthedocs.org/projects/mbpls/badge/?version=latest
     :target: https://mbpls.readthedocs.io/en/latest/?badge=latest
@@ -16,6 +14,11 @@ Multiblock Partial Least Squares Package
 .. image:: http://joss.theoj.org/papers/10.21105/joss.01190/status.svg
    :target: https://doi.org/10.21105/joss.01190
    :alt: JOSS Paper DOI
+
+
+*This is a newly maintained version of the MBPLS software originally developed by Andreas Baum and Laurent Vermue
+(homepage: https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/). This maintained version has been updated to be compatible with Python 3.8 and later.
+Lukas Kopecky, April 2026.*
 
 An easy to use Python package for (Multiblock) Partial Least Squares
 prediction modelling of univariate or multivariate outcomes. Four state
@@ -27,7 +30,7 @@ toolbox.
 
 The documentation is available at https://mbpls.readthedocs.io
 and elaborate (real-world) Jupyter Notebook examples can be found at
-https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS/tree/master/examples
+https://github.com/kopeckylukas/MB-PLS/tree/master/examples
 
 This package can be cited using the following reference. 
 
@@ -41,7 +44,7 @@ Installation
 -  | Install the package for Python3 using the following command. Some
      dependencies might require an upgrade (scikit-learn, numpy and
      scipy).
-   | ``$ pip install mbpls``
+   | ``$ pip install multiblock-pls``
 
 -  | Now you can import the MBPLS class by typing
    | ``from mbpls.mbpls import MBPLS``

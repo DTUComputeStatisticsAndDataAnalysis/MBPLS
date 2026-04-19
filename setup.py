@@ -9,21 +9,23 @@
 
 from setuptools import setup, find_packages
 
-import mbpls
+# import mbpls
 
-NAME = "mbpls"
-VERSION = mbpls.__version__
+NAME = "multiblock-pls"
+# VERSION = mbpls.__version__
+VERSION = '1.1.0'
 DESCRIPTION = "An implementation of the most common partial least squares algorithms as multi-block methods"
-URL = 'https://github.com/DTUComputeStatisticsAndDataAnalysis/MBPLS'
-AUTHORS = "Andreas Baum, Laurent Vermue"
-AUTHOR_MAILS = "<andba@dtu.dk>, <lauve@dtu.dk>"
+URL = 'https://github.com/kopeckylukas/MB-PLS'
+AUTHORS = "Andreas Baum, Laurent Vermue, Lukas Kopecky"
+AUTHOR_MAILS = "<andba@dtu.dk>, <lauve@dtu.dk>, <l.kopecky22@imperial.ac.uk>"
 LICENSE = 'new BSD'
 
 # This is the lowest tested version. Below might work as well
-NUMPY_MIN_VERSION = '1.13.3'
-SCIPY_MIN_VERSION = '1.0.0'
-SCIKIT_LEARN_MIN_VERSION = '0.22.1'
-PANDAS_MIN_VERSION = '0.20.0'
+NUMPY_MIN_VERSION = '1.19.5'
+SCIPY_MIN_VERSION = '1.6.0'
+SCIKIT_LEARN_MIN_VERSION = '1.6.0'
+PANDAS_MIN_VERSION = '2.0.0'
+MATPLOTLIB_MIN_VERSION = '3.0.0'
 
 def setup_package():
     with open('README.rst') as f:
@@ -50,9 +52,12 @@ def setup_package():
                        'Operating System :: POSIX',
                        'Operating System :: Unix',
                        'Operating System :: MacOS',
-                       'Programming Language :: Python :: 3.5',
-                       'Programming Language :: Python :: 3.6',
-                       'Programming Language :: Python :: 3.7',
+                       'Programming Language :: Python :: 3.9',
+                       'Programming Language :: Python :: 3.10',
+                       'Programming Language :: Python :: 3.11',
+                       'Programming Language :: Python :: 3.12',
+                       'Programming Language :: Python :: 3.13',
+                       'Programming Language :: Python :: 3.14',
                        # 'Development Status :: 4 - Beta',
                        'Development Status :: 5 - Production/Stable'
                        ],
@@ -60,7 +65,8 @@ def setup_package():
               'numpy>={0}'.format(NUMPY_MIN_VERSION),
               'scipy>={0}'.format(SCIPY_MIN_VERSION),
               'scikit-learn>={0}'.format(SCIKIT_LEARN_MIN_VERSION),
-              'pandas>={0}'.format(PANDAS_MIN_VERSION)
+              'pandas>={0}'.format(PANDAS_MIN_VERSION),
+              'matplotlib>={0}'.format(MATPLOTLIB_MIN_VERSION)
                 ],
           extras_require={
               'tests': [
@@ -70,12 +76,9 @@ def setup_package():
                   'sphinx_rtd_theme',
                   'nbsphinx',
                   'nbsphinx_link'
-                    ],
-              'extras': [
-                  'matplotlib',
               ],
           },
-          python_requires='>=3.5',
+          python_requires='>=3.9',
           )
 
 if __name__ == '__main__':

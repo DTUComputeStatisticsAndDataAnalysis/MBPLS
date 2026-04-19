@@ -290,7 +290,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                 self.method = 'NIPALS'
 
         global U_, T_, R_
-        Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data, copy=self.copy)
+        Y = check_array(Y, dtype=np.float64, ensure_2d=False, ensure_all_finite=not self.sparse_data, copy=self.copy)
         if self.sparse_data is True:
             self.sparse_Y_info_ = {}
             self.sparse_Y_info_['Y'] = self.check_sparsity_level(Y)
@@ -308,14 +308,14 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                     # Check dimensions
                     check_consistent_length(X[block], Y)
                     X[block] = check_array(X[block], dtype=np.float64, copy=self.copy,
-                                           force_all_finite=not self.sparse_data)
+                                           ensure_all_finite=not self.sparse_data)
                     if self.sparse_data is True:
                         self.sparse_X_info_[block] = self.check_sparsity_level(X[block])
                     X[block] = self.x_scalers_[block].fit_transform(X[block])
             else:
                 self.x_scalers_.append(StandardScaler(with_mean=True, with_std=True))
                 # Check dimensions
-                X = check_array(X, dtype=np.float64, copy=self.copy, force_all_finite=not self.sparse_data)
+                X = check_array(X, dtype=np.float64, copy=self.copy, ensure_all_finite=not self.sparse_data)
                 if self.sparse_data is True:
                     self.sparse_X_info_ = {}
                     self.sparse_X_info_[0] = self.check_sparsity_level(X)
@@ -334,12 +334,12 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                     # Check dimensions
                     check_consistent_length(X[block], Y)
                     X[block] = check_array(X[block], dtype=np.float64, copy=self.copy,
-                                           force_all_finite=not self.sparse_data)
+                                           ensure_all_finite=not self.sparse_data)
                     if self.sparse_data is True:
                         self.sparse_X_info_[block] = self.check_sparsity_level(X[block])
             else:
                 # Check dimensions
-                X = check_array(X, dtype=np.float64, copy=self.copy, force_all_finite=not self.sparse_data)
+                X = check_array(X, dtype=np.float64, copy=self.copy, ensure_all_finite=not self.sparse_data)
                 if self.sparse_data is True:
                     self.sparse_X_info_ = {}
                     self.sparse_X_info_[0] = self.check_sparsity_level(X)
@@ -358,7 +358,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
 
         self.W_ = []
         self.W_non_normal_ = []
-        if self.method is not 'SIMPLS':
+        if self.method != 'SIMPLS':
             self.A_ = np.empty((self.num_blocks_, 0))
             self.A_corrected_ = np.empty((self.num_blocks_, 0))
             self.T_ = []
@@ -372,7 +372,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
         for block in range(self.num_blocks_):
             self.W_.append(np.empty((X[block].shape[1], 0)))
             self.W_non_normal_.append(np.empty((X[block].shape[1], 0)))
-            if self.method is not 'SIMPLS':
+            if self.method != 'SIMPLS':
                 self.T_.append(np.empty((X[block].shape[0], 0)))
 
         # Concatenate X blocks
@@ -1091,13 +1091,13 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                     X = deepcopy(X)
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
+                    X[block] = check_array(X[block], dtype=np.float64, ensure_all_finite=not self.sparse_data, copy=copy)
                     if self.sparse_data:
                         sparse_X_info_[block] = self.check_sparsity_level(X[block])
                     X[block] = self.x_scalers_[block].transform(X[block])
             else:
                 # Check dimensions
-                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
+                X = check_array(X, dtype=np.float64, ensure_all_finite=not self.sparse_data, copy=copy)
                 if self.sparse_data:
                     sparse_X_info_[0] = self.check_sparsity_level(X)
                 X = [self.x_scalers_[0].transform(X)]
@@ -1117,14 +1117,14 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                 Ts_ = X_comp.dot(self.R_)
 
             if Y is not None:
-                Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data, copy=copy)
+                Y = check_array(Y, dtype=np.float64, ensure_2d=False, ensure_all_finite=not self.sparse_data, copy=copy)
                 if self.sparse_data:
                     sparse_Y_info_['Y'] = self.check_sparsity_level(Y)
                 if Y.ndim == 1:
                     Y = Y.reshape(-1, 1)
                 Y = self.y_scaler_.transform(Y)
                 # Here the block scores are calculated iteratively for new blocks
-                if self.method is not 'SIMPLS': 
+                if self.method != 'SIMPLS': 
                     T_ = []
                     for block in range(self.num_blocks_):
                         T_.append(np.empty((X[block].shape[0], 0)))
@@ -1182,7 +1182,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                         U_ = Y.dot(self.V_) / np.linalg.norm(Y.dot(self.V_), axis=0)
                     return Ts_, U_
             else:
-                if self.method is not 'SIMPLS':
+                if self.method != 'SIMPLS':
                     # Here the block scores are calculated iteratively for new blocks
                     T_ = []
                     for block in range(self.num_blocks_):
@@ -1225,12 +1225,12 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                     X = deepcopy(X)
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
+                    X[block] = check_array(X[block], dtype=np.float64, ensure_all_finite=not self.sparse_data, copy=copy)
                     if self.sparse_data:
                         sparse_X_info_[block] = self.check_sparsity_level(X[block])
             else:
                 # Check dimensions
-                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
+                X = check_array(X, dtype=np.float64, ensure_all_finite=not self.sparse_data, copy=copy)
                 if self.sparse_data:
                     sparse_X_info_[0] = self.check_sparsity_level(X)
                 X = [X]
@@ -1250,7 +1250,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                 Ts_ = X_comp.dot(self.R_)
 
             if Y is not None:
-                Y = check_array(Y, dtype=np.float64, ensure_2d=False, force_all_finite=not self.sparse_data, copy=copy)
+                Y = check_array(Y, dtype=np.float64, ensure_2d=False, ensure_all_finite=not self.sparse_data, copy=copy)
                 if self.sparse_data:
                     sparse_Y_info_['Y'] = self.check_sparsity_level(Y)
                 if Y.ndim == 1:
@@ -1365,10 +1365,10 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                     X = deepcopy(X)
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
+                    X[block] = check_array(X[block], dtype=np.float64, ensure_all_finite=not self.sparse_data, copy=copy)
                     X[block] = self.x_scalers_[block].transform(X[block])
             else:
-                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
+                X = check_array(X, dtype=np.float64, ensure_all_finite=not self.sparse_data, copy=copy)
                 X = [self.x_scalers_[0].transform(X)]
 
 
@@ -1390,9 +1390,9 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
                     X = deepcopy(X)
                 for block in range(len(X)):
                     # Check dimensions
-                    X[block] = check_array(X[block], dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
+                    X[block] = check_array(X[block], dtype=np.float64, ensure_all_finite=not self.sparse_data, copy=copy)
             else:
-                X = check_array(X, dtype=np.float64, force_all_finite=not self.sparse_data, copy=copy)
+                X = check_array(X, dtype=np.float64, ensure_all_finite=not self.sparse_data, copy=copy)
                 X = [X]
             X = np.hstack(X)
             if self.sparse_data:
@@ -1493,7 +1493,7 @@ class MBPLS(TransformerMixin, RegressorMixin, MultiOutputMixin, BaseEstimator):
             for block in range(self.num_blocks_):
                 # Inverse transforming weights/loadings
                 if self.standardize:
-                    P_inv_trans.append(self.x_scalers_[block].inverse_transform(self.P_[block][:, comp]))
+                    P_inv_trans.append(self.x_scalers_[block].inverse_transform(self.P_[block][:, comp].reshape(1, -1)).flatten())
                 else:
                     P_inv_trans.append(self.P_[block][:, comp])
 
